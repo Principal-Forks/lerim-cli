@@ -40,8 +40,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Continual learning layer for coding agents and projects.
 - Platform adapters for Claude Code, Codex CLI, Cursor, and OpenCode.
-- Memory extraction pipeline using DSPy RLM to extract decisions and learnings from coding session traces.
-- Trace summarization pipeline using DSPy RLM to produce structured summaries with YAML frontmatter.
+- Memory extraction pipeline using DSPy ChainOfThought with transcript windowing to extract decisions and learnings from coding session traces.
+- Trace summarization pipeline using DSPy ChainOfThought with transcript windowing to produce structured summaries with YAML frontmatter.
 - PydanticAI lead agent with a read-only explorer subagent for memory operations.
 - Three CLI flows: `sync` (extract, summarize, write memories), `maintain` (merge, archive, decay), and `ask` (query memories).
 - Daemon mode for continuous sync and maintain loop.

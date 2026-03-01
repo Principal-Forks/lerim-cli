@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2026-02-28
+Last updated: 2026-03-01
 
 ## Summary
 
@@ -9,7 +9,7 @@ Lerim is a file-first continual learning layer for coding agents.
 1. Ingest sessions from local agent adapters.
 2. Lead runtime takes only `trace_path` and creates one per-run workspace folder.
 3. Orchestration runs on `pydantic-ai` with typed tools and read-only subagent delegation.
-4. Extraction/summarization run through `dspy.RLM` tool calls and write `extract.json` + `summary.json`.
+4. Extraction/summarization run through `dspy.ChainOfThought` with transcript windowing and write `extract.json` + `summary.json`.
 5. Lead decides `add|update|no-op` by deterministic prompt policy and writes markdown files (`decision`, `learning`) plus one episodic `summary`.
 6. Run evidence is stored as flat artifacts in the workspace folder.
 7. Retrieve with project-first scope and global fallback.
@@ -37,7 +37,6 @@ Setup: `pip install lerim && lerim init && lerim project add . && lerim up`
 ## Runtime prerequisites
 
 - **Docker** — required for the always-on service (`lerim up`)
-- **Deno** — required inside the container by `dspy.RLM` (baked into the Docker image)
 - **Python 3.10+** — required on the host for `pip install lerim` (init, project management)
 
 ## System flow
@@ -111,7 +110,7 @@ Memory scope modes:
 ### Sync path
 
 <p align="center">
-  <img src="assets/sync.png" alt="Sync path" width="700">
+  <img src="../assets/sync.png" alt="Sync path" width="700">
 </p>
 
 **sync**: discover/index sessions, run lead by `trace_path`, write run artifacts to workspace folder, run lead decision (`add|update|no-op`), write memory + summaries.
@@ -119,7 +118,7 @@ Memory scope modes:
 ### Maintain path
 
 <p align="center">
-  <img src="assets/maintain.png" alt="Maintain path" width="700">
+  <img src="../assets/maintain.png" alt="Maintain path" width="700">
 </p>
 
 **maintain**: agent-led offline memory refinement. Scans existing memories, merges duplicates, archives low-value entries, consolidates related memories. Soft-deletes to `archived/` via the `write` tool. Single agent run with comprehensive prompt.
@@ -149,10 +148,10 @@ Read-only agent delegated from the lead for candidate gathering:
 
 Called as tools from the lead agent:
 
-- **Extraction** (`MemoryExtractSignature`): transcript -> structured memory candidates
-- **Summarization** (`TraceSummarySignature`): transcript -> structured summary with frontmatter
+- **Extraction** (`MemoryExtractSignature`): transcript -> windowed ChainOfThought -> per-window candidates -> merge -> structured memory candidates
+- **Summarization** (`TraceSummarySignature`): transcript -> windowed ChainOfThought -> partial summaries -> merge -> structured summary with frontmatter
 
-Both run through `dspy.RLM` with role-configured models.
+Both run through `dspy.ChainOfThought` with transcript windowing (configurable via `max_window_tokens` and `window_overlap_tokens` per role). Large transcripts are split into overlapping windows, processed independently, then merged in a final ChainOfThought call.
 
 ## Observability
 

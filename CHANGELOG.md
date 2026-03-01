@@ -18,12 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - HTTP API: `/api/health`, `/api/ask`, `/api/sync`, `/api/maintain`, `/api/status`, `/api/connect`, `/api/project/*`.
 - `[agents]`, `[projects]`, and `[providers]` config sections in `config.toml`.
 - Provider API base URLs configurable via `[providers]` section (no more hardcoded URLs).
-- `Dockerfile` with Python 3.12 + Deno, health check, `lerim serve` entrypoint.
+- `Dockerfile` with Python 3.12, health check, `lerim serve` entrypoint.
 - Same-path volume mounting for zero path translation between host and container.
 - Continual learning layer for coding agents and projects.
 - Platform adapters for Claude Code, Codex CLI, Cursor, and OpenCode.
-- Memory extraction pipeline using DSPy RLM to extract decisions and learnings from coding session traces.
-- Trace summarization pipeline using DSPy RLM to produce structured summaries with YAML frontmatter.
+- Memory extraction pipeline using DSPy ChainOfThought with transcript windowing to extract decisions and learnings from coding session traces.
+- Trace summarization pipeline using DSPy ChainOfThought with transcript windowing to produce structured summaries with YAML frontmatter.
 - PydanticAI lead agent with a read-only explorer subagent for memory operations.
 - Three CLI flows: `sync` (extract, summarize, write memories), `maintain` (merge, archive, decay), and `ask` (query memories).
 - Daemon mode for continuous sync and maintain loop.

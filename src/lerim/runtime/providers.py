@@ -225,24 +225,6 @@ def build_dspy_lm(
     )
 
 
-def build_dspy_sub_lm(
-    role: DSPyRoleName,
-    *,
-    config: Config | None = None,
-) -> dspy.LM:
-    """Build a DSPy sub-LM for RLM sub-calls (llm_query/llm_query_batched)."""
-    cfg = config or get_config()
-    role_cfg = _dspy_role_config(cfg, role)
-    return _build_dspy_lm_for_provider(
-        provider=role_cfg.sub_provider.strip().lower(),
-        model=role_cfg.sub_model,
-        api_base=role_cfg.api_base,
-        cfg=cfg,
-        role_label=f"roles.{role}.sub_provider={role_cfg.sub_provider}",
-        openrouter_provider_order=role_cfg.openrouter_provider_order,
-    )
-
-
 def list_provider_models(provider: str) -> list[str]:
     """Return static provider model suggestions for dashboard UI selections."""
     normalized = str(provider).strip().lower()

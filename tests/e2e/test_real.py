@@ -71,7 +71,7 @@ def test_extract_pipeline_end_to_end_without_network(
 
     monkeypatch.setattr(
         pipeline,
-        "_extract_candidates_with_rlm",
+        "_extract_candidates",
         lambda *_args, **_kwargs: [
             {
                 "primitive": "learning",

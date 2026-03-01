@@ -830,19 +830,18 @@ def _serialize_full_config(config: Config) -> dict[str, Any]:
             "model": role.model,
             "api_base": getattr(role, "api_base", ""),
             "timeout_seconds": role.timeout_seconds,
-            "max_iterations": role.max_iterations,
             "openrouter_provider_order": list(
                 getattr(role, "openrouter_provider_order", ())
             ),
         }
+        if hasattr(role, "max_iterations"):
+            base["max_iterations"] = role.max_iterations
         if hasattr(role, "fallback_models"):
             base["fallback_models"] = list(role.fallback_models)
-        if hasattr(role, "sub_model"):
-            base["sub_model"] = role.sub_model
-        if hasattr(role, "sub_provider"):
-            base["sub_provider"] = role.sub_provider
-        if hasattr(role, "max_llm_calls"):
-            base["max_llm_calls"] = role.max_llm_calls
+        if hasattr(role, "max_window_tokens"):
+            base["max_window_tokens"] = role.max_window_tokens
+        if hasattr(role, "window_overlap_tokens"):
+            base["window_overlap_tokens"] = role.window_overlap_tokens
         return base
 
     return {

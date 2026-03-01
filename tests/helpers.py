@@ -56,10 +56,8 @@ def make_config(base: Path) -> Config:
             model="qwen/qwen3-coder-30b-a3b-instruct",
             api_base="",
             timeout_seconds=180,
-            max_iterations=24,
-            max_llm_calls=24,
-            sub_provider="openrouter",
-            sub_model="qwen/qwen3-coder-30b-a3b-instruct",
+            max_window_tokens=300000,
+            window_overlap_tokens=5000,
             openrouter_provider_order=("nebius",),
         ),
         summarize_role=DSPyRoleConfig(
@@ -67,10 +65,8 @@ def make_config(base: Path) -> Config:
             model="qwen/qwen3-coder-30b-a3b-instruct",
             api_base="",
             timeout_seconds=180,
-            max_iterations=24,
-            max_llm_calls=24,
-            sub_provider="openrouter",
-            sub_model="qwen/qwen3-coder-30b-a3b-instruct",
+            max_window_tokens=300000,
+            window_overlap_tokens=5000,
             openrouter_provider_order=("nebius",),
         ),
         sync_window_days=7,
@@ -125,8 +121,8 @@ def write_test_config(tmp_path: Path, **sections: dict[str, Any]) -> Path:
                 "provider": "provider",
                 "model": "model",
                 "api_base": "api_base",
-                "rlm_max_iterations": "max_iterations",
-                "rlm_max_llm_calls": "max_llm_calls",
+                "max_window_tokens": "max_window_tokens",
+                "window_overlap_tokens": "window_overlap_tokens",
             }.get(key)
             if mapped:
                 extract[mapped] = value
