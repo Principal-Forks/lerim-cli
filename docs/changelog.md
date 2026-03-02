@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.55] - 2026-03-02
+
+### Added
+
+- `lerim skill install` command — installs Lerim skill files (SKILL.md, cli-reference.md) directly into coding agent directories (Claude Code, Cursor, Codex, OpenCode). No `npx`, no git clone needed — skill files are bundled with the pip package.
+- Bundled skill files in `src/lerim/skills/` included as package data.
+- Updated skill CLI reference with missing `daemon --max-sessions` and `dashboard --port` flags.
+- Updated skill SKILL.md with current setup flow (`lerim init` → `lerim project add .` → `lerim up`).
+
 ## [0.1.54] - 2026-03-02
 
 ### Added

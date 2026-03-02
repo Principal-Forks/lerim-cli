@@ -635,6 +635,42 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     return 0
 
 
+_SKILL_TARGETS: dict[str, Path] = {
+    "agents": Path.home() / ".agents" / "skills" / "lerim",
+    "claude": Path.home() / ".claude" / "skills" / "lerim",
+}
+"""Skill install targets: ~/.agents/skills (shared by most agents) + ~/.claude/skills (Claude-specific)."""
+
+
+def _cmd_skill(args: argparse.Namespace) -> int:
+    """Install Lerim skill files into coding agent directories."""
+    action = getattr(args, "skill_action", None)
+    if action != "install":
+        _emit("Usage: lerim skill install")
+        return 2
+
+    from lerim.skills import SKILLS_DIR
+
+    skill_files = [SKILLS_DIR / "SKILL.md", SKILLS_DIR / "cli-reference.md"]
+    missing = [f for f in skill_files if not f.exists()]
+    if missing:
+        _emit(f"Skill files not found in package: {missing}", file=sys.stderr)
+        return 1
+
+    installed = []
+    for label, dest in _SKILL_TARGETS.items():
+        dest.mkdir(parents=True, exist_ok=True)
+        for src in skill_files:
+            (dest / src.name).write_text(src.read_text())
+        installed.append(f"~/.{label}/skills/lerim" if label != "agents"
+                         else "~/.agents/skills/lerim")
+
+    _emit(f"Installed lerim skill to: {', '.join(installed)}")
+    _emit("  ~/.agents/skills/lerim  → Cursor, Codex, OpenCode, and others")
+    _emit("  ~/.claude/skills/lerim  → Claude Code")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Construct the canonical Lerim command-line parser."""
     _F = argparse.RawDescriptionHelpFormatter  # noqa: N806
@@ -1149,6 +1185,29 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--port", type=int, help="Bind port (default: 8765).")
     serve.set_defaults(func=_cmd_serve)
 
+    # ── skill ─────────────────────────────────────────────────────────
+    skill = sub.add_parser(
+        "skill",
+        formatter_class=_F,
+        help="Install Lerim skill files into coding agent directories",
+        description=(
+            "Install bundled skill files (SKILL.md, cli-reference.md) into\n"
+            "coding agent skill directories so agents can query Lerim.\n\n"
+            "Installs to two locations:\n"
+            "  ~/.agents/skills/lerim/  — shared by Cursor, Codex, OpenCode, and others\n"
+            "  ~/.claude/skills/lerim/  — Claude Code (reads only from its own dir)\n\n"
+            "Examples:\n"
+            "  lerim skill install"
+        ),
+    )
+    skill_sub = skill.add_subparsers(dest="skill_action")
+    skill_sub.add_parser(
+        "install",
+        formatter_class=_F,
+        help="Copy skill files into agent directories",
+    )
+    skill.set_defaults(func=_cmd_skill)
+
     return parser
 
 
@@ -1168,6 +1227,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "project" and not getattr(args, "project_action", None):
+        parser.parse_args([args.command, "--help"])
+        return 0
+
+    if args.command == "skill" and not getattr(args, "skill_action", None):
         parser.parse_args([args.command, "--help"])
         return 0
 

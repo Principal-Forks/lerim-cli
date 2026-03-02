@@ -36,7 +36,7 @@ lerim --version
 You should see output like:
 
 ```
-lerim, version 0.1.54
+lerim, version 0.1.55
 ```
 
 </div>
@@ -208,10 +208,10 @@ Lerim status:
 Install the Lerim skill so your coding agent knows how to query past context:
 
 ```bash
-npx skills add lerim-dev/lerim-cli
+lerim skill install
 ```
 
-This works with Claude Code, Codex, Cursor, Copilot, Cline, Windsurf, OpenCode, and [other agents that support skills](https://skills-ai.dev).
+This copies SKILL.md and the CLI reference into your agent's skill directory. Supported agents: Claude Code, Codex, Cursor, OpenCode.
 
 At the start of a coding session, tell your agent:
 
