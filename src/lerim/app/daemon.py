@@ -14,6 +14,11 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+from opentelemetry import trace
+
+# Get tracer for sync operations
+_tracer = trace.get_tracer("lerim.sync", "0.1.0")
+
 from lerim.app.activity_log import log_activity
 from lerim.app.arg_utils import parse_duration_to_seconds
 from lerim.config.project_scope import match_session_project
@@ -394,25 +399,47 @@ def run_sync_once(
     t0 = time.monotonic()
     reload_config()
 
-    started = _now_iso()
-    status = "completed"
-    lock = None
-    if not dry_run and not ignore_lock:
-        lock = ServiceLock(lock_path(WRITER_LOCK_NAME), stale_seconds=60)
-        try:
-            lock.acquire("sync", "lerim sync")
-        except LockBusyError as exc:
-            _record_service_event(
-                record_service_run,
-                job_type="sync",
-                status="lock_busy",
-                started_at=started,
-                trigger=trigger,
-                details={"error": str(exc)},
-            )
-            return EXIT_LOCK_BUSY, _empty_sync_summary()
-
+    # Start OTEL span for sync operation
+    span = _tracer.start_span("sync.operation")
     try:
+        # Emit sync.started event
+        span.add_event(
+            "sync.started",
+            attributes={
+                "trigger": trigger,
+                "input.maxSessions": max_sessions,
+                "input.agentFilter": ",".join(agent_filter) if agent_filter else "",
+                "input.dryRun": dry_run,
+            },
+        )
+
+        started = _now_iso()
+        status = "completed"
+        lock = None
+        if not dry_run and not ignore_lock:
+            lock = ServiceLock(lock_path(WRITER_LOCK_NAME), stale_seconds=60)
+            try:
+                lock.acquire("sync", "lerim sync")
+            except LockBusyError as exc:
+                # Emit sync.error event for lock busy
+                span.add_event(
+                    "sync.error",
+                    attributes={
+                        "error.type": "LockBusyError",
+                        "error.message": str(exc),
+                        "error.stage": "lock",
+                    },
+                )
+                _record_service_event(
+                    record_service_run,
+                    job_type="sync",
+                    status="lock_busy",
+                    started_at=started,
+                    trigger=trigger,
+                    details={"error": str(exc)},
+                )
+                return EXIT_LOCK_BUSY, _empty_sync_summary()
+
         config = get_config()
         target_run_ids: list[str] = []
         indexed_sessions = 0
@@ -470,6 +497,15 @@ def run_sync_once(
                         queued_sessions += 1
                 target_run_ids = [item.run_id for item in details]
 
+        # Emit sync.index.complete event
+        span.add_event(
+            "sync.index.complete",
+            attributes={
+                "output.indexedSessions": indexed_sessions,
+                "output.queuedSessions": queued_sessions,
+            },
+        )
+
         extracted = 0
         skipped = 0
         failed = 0
@@ -503,6 +539,19 @@ def run_sync_once(
             ) = _process_claimed_jobs(claimed)
             skipped += routing_skipped
 
+        # Emit sync.extract.complete event
+        span.add_event(
+            "sync.extract.complete",
+            attributes={
+                "output.extractedSessions": extracted,
+                "output.skippedSessions": skipped,
+                "output.failedSessions": failed,
+                "output.learningsNew": learnings_new,
+                "output.learningsUpdated": learnings_updated,
+                "output.costUsd": cost_usd,
+            },
+        )
+
         summary = SyncSummary(
             indexed_sessions=indexed_sessions,
             extracted_sessions=extracted,
@@ -521,6 +570,17 @@ def run_sync_once(
         elif failed > 0 and extracted == 0 and indexed_sessions == 0:
             code = EXIT_FATAL
             status = "failed"
+
+        # Emit sync.complete event
+        duration_ms = int((time.monotonic() - t0) * 1000)
+        span.add_event(
+            "sync.complete",
+            attributes={
+                "output.status": status,
+                "output.exitCode": code,
+                "duration.ms": duration_ms,
+            },
+        )
 
         _record_service_event(
             record_service_run,
@@ -562,6 +622,7 @@ def run_sync_once(
     finally:
         if lock:
             lock.release()
+        span.end()
 
 
 def run_maintain_once(

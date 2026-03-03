@@ -1,0 +1,37 @@
+{
+	"version": "1.0.0",
+	"canvas": ".principal-views/sync/sync.otel.canvas",
+	"name": "Sync Operation",
+	"description": "Index sessions from agent platforms and extract memories",
+	"spanPattern": "sync.operation",
+	"mode": "span-tree",
+	"scenarioSelection": "first-match",
+	"scenarios": [
+		{
+			"id": "success",
+			"priority": 1,
+			"description": "Sync completed successfully with extraction",
+			"template": {
+				"summary": "Sync completed: {{output.extractedSessions}} sessions, {{output.learningsNew}} new + {{output.learningsUpdated}} updated",
+				"events": {
+					"sync.started": "Starting sync (trigger: {{trigger}}, max: {{input.maxSessions}} sessions, dry: {{input.dryRun}}, filter: {{input.agentFilter}})",
+					"sync.index.complete": "Indexed {{output.indexedSessions}} sessions, queued {{output.queuedSessions}}",
+					"sync.extract.complete": "Extracted {{output.extractedSessions}} sessions ({{output.skippedSessions}} skipped, {{output.failedSessions}} failed, {{output.learningsNew}} new, {{output.learningsUpdated}} updated, cost: ${{output.costUsd}})",
+					"sync.complete": "Sync {{output.status}} in {{duration.ms}}ms (exit: {{output.exitCode}})"
+				}
+			}
+		},
+		{
+			"id": "error",
+			"priority": 2,
+			"description": "Sync failed with error (lock busy or fatal)",
+			"template": {
+				"summary": "Sync failed: {{error.message}}",
+				"events": {
+					"sync.started": "Starting sync (trigger: {{trigger}})",
+					"sync.error": "{{error.type}}: {{error.message}} (stage: {{error.stage}})"
+				}
+			}
+		}
+	]
+}

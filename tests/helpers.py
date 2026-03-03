@@ -74,6 +74,8 @@ def make_config(base: Path) -> Config:
         tracing_enabled=False,
         tracing_include_httpx=False,
         tracing_include_content=True,
+        tracing_otlp_endpoint=None,
+        tracing_send_to_logfire=False,
         anthropic_api_key=None,
         openai_api_key=None,
         zai_api_key=None,

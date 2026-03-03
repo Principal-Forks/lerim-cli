@@ -1,0 +1,298 @@
+{
+	"nodes": [
+		{
+			"id": "sync-started",
+			"type": "text",
+			"x": 100,
+			"y": 50,
+			"width": 200,
+			"height": 100,
+			"text": "# Sync Started\n\nSync operation begins.",
+			"pv": {
+				"event": {
+					"name": "sync.started",
+					"attributes": {
+						"trigger": {
+							"type": "string",
+							"required": true,
+							"description": "What triggered sync: daemon, manual, api"
+						},
+						"input.maxSessions": {
+							"type": "number",
+							"required": true
+						},
+						"input.agentFilter": {
+							"type": "string",
+							"required": false,
+							"description": "Comma-separated agent types to filter"
+						},
+						"input.dryRun": {
+							"type": "boolean",
+							"required": false
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/app/daemon.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "lifecycle",
+					"files": ["src/lerim/app/daemon.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#22c55e",
+				"stroke": "#16a34a",
+				"status": "implemented"
+			},
+			"color": "#22c55e"
+		},
+		{
+			"id": "index-complete",
+			"type": "text",
+			"x": 100,
+			"y": 250,
+			"width": 200,
+			"height": 100,
+			"text": "# Index Complete\n\nSessions discovered from platforms.",
+			"pv": {
+				"event": {
+					"name": "sync.index.complete",
+					"attributes": {
+						"output.indexedSessions": {
+							"type": "number",
+							"required": true
+						},
+						"output.queuedSessions": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/app/daemon.py",
+					"src/lerim/sessions/catalog.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "operation",
+					"files": ["src/lerim/app/daemon.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#3b82f6",
+				"stroke": "#1d4ed8",
+				"status": "implemented"
+			},
+			"color": "#3b82f6"
+		},
+		{
+			"id": "extract-complete",
+			"type": "text",
+			"x": 100,
+			"y": 450,
+			"width": 200,
+			"height": 100,
+			"text": "# Extract Complete\n\nMemories extracted from sessions.",
+			"pv": {
+				"event": {
+					"name": "sync.extract.complete",
+					"attributes": {
+						"output.extractedSessions": {
+							"type": "number",
+							"required": true
+						},
+						"output.skippedSessions": {
+							"type": "number",
+							"required": true
+						},
+						"output.failedSessions": {
+							"type": "number",
+							"required": true
+						},
+						"output.learningsNew": {
+							"type": "number",
+							"required": true
+						},
+						"output.learningsUpdated": {
+							"type": "number",
+							"required": true
+						},
+						"output.costUsd": {
+							"type": "number",
+							"required": false
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/app/daemon.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "operation",
+					"files": ["src/lerim/app/daemon.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#3b82f6",
+				"stroke": "#1d4ed8",
+				"status": "implemented"
+			},
+			"color": "#3b82f6"
+		},
+		{
+			"id": "sync-complete",
+			"type": "text",
+			"x": 100,
+			"y": 650,
+			"width": 200,
+			"height": 100,
+			"text": "# Sync Complete\n\nSync operation finished successfully.",
+			"pv": {
+				"event": {
+					"name": "sync.complete",
+					"attributes": {
+						"output.status": {
+							"type": "string",
+							"required": true,
+							"description": "completed, partial, or failed"
+						},
+						"output.exitCode": {
+							"type": "number",
+							"required": true
+						},
+						"duration.ms": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/app/daemon.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "lifecycle",
+					"files": ["src/lerim/app/daemon.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#22c55e",
+				"stroke": "#16a34a",
+				"status": "implemented"
+			},
+			"color": "#22c55e"
+		},
+		{
+			"id": "sync-error",
+			"type": "text",
+			"x": 450,
+			"y": 250,
+			"width": 200,
+			"height": 100,
+			"text": "# Sync Error\n\nSync operation failed.",
+			"pv": {
+				"event": {
+					"name": "sync.error",
+					"attributes": {
+						"error.type": {
+							"type": "string",
+							"required": true
+						},
+						"error.message": {
+							"type": "string",
+							"required": true
+						},
+						"error.stage": {
+							"type": "string",
+							"required": false,
+							"description": "Stage where error occurred: lock, index, extract"
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/app/daemon.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "error",
+					"files": ["src/lerim/app/daemon.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#ef4444",
+				"stroke": "#dc2626",
+				"status": "implemented"
+			},
+			"color": "#ef4444"
+		}
+	],
+	"edges": [
+		{
+			"id": "started-to-index",
+			"fromNode": "sync-started",
+			"fromSide": "bottom",
+			"toNode": "index-complete",
+			"toSide": "top",
+			"pv": {
+				"edgeType": "flow"
+			}
+		},
+		{
+			"id": "index-to-extract",
+			"fromNode": "index-complete",
+			"fromSide": "bottom",
+			"toNode": "extract-complete",
+			"toSide": "top",
+			"pv": {
+				"edgeType": "flow"
+			}
+		},
+		{
+			"id": "extract-to-complete",
+			"fromNode": "extract-complete",
+			"fromSide": "bottom",
+			"toNode": "sync-complete",
+			"toSide": "top",
+			"pv": {
+				"edgeType": "flow"
+			}
+		},
+		{
+			"id": "started-to-error",
+			"fromNode": "sync-started",
+			"fromSide": "right",
+			"toNode": "sync-error",
+			"toSide": "left",
+			"pv": {
+				"edgeType": "error"
+			}
+		},
+		{
+			"id": "index-to-error",
+			"fromNode": "index-complete",
+			"fromSide": "right",
+			"toNode": "sync-error",
+			"toSide": "left",
+			"pv": {
+				"edgeType": "error"
+			}
+		}
+	],
+	"pv": {
+		"name": "Sync Operation",
+		"version": "1.0.0",
+		"description": "OpenTelemetry events for lerim sync operation - indexing sessions and extracting memories",
+		"markdown": ".principal-views/sync/sync.md",
+		"edgeTypes": {
+			"flow": {
+				"label": "Flow",
+				"style": "solid",
+				"width": 2,
+				"color": "#64748b"
+			},
+			"error": {
+				"label": "Error Path",
+				"style": "dashed",
+				"width": 2,
+				"color": "#ef4444"
+			}
+		}
+	}
+}
