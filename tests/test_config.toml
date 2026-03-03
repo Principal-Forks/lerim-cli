@@ -8,6 +8,11 @@
 [memory]
 scope = "global_only"
 
+[tracing]
+enabled = true
+otlp_endpoint = "http://localhost:4318/v1/traces"
+send_to_logfire = false
+
 [roles.lead]
 provider = "minimax"
 model = "MiniMax-M2.5"

@@ -76,6 +76,8 @@ ollama = "http://127.0.0.1:11434"
 enabled = false                          # set true or LERIM_TRACING=1 to enable
 include_httpx = false                    # capture raw HTTP request/response bodies
 include_content = true                   # include prompt/completion text in spans
+otlp_endpoint = ""                       # OTLP HTTP endpoint (e.g., http://localhost:4318/v1/traces)
+send_to_logfire = true                   # send traces to Logfire cloud (if token present)
 
 [agents]
 # Map agent names to session directory paths.

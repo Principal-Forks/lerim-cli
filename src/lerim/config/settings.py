@@ -270,6 +270,8 @@ class Config:
     tracing_enabled: bool
     tracing_include_httpx: bool
     tracing_include_content: bool
+    tracing_otlp_endpoint: str | None
+    tracing_send_to_logfire: bool
 
     anthropic_api_key: str | None
     openai_api_key: str | None
@@ -381,6 +383,8 @@ class Config:
             "tracing_enabled": self.tracing_enabled,
             "tracing_include_httpx": self.tracing_include_httpx,
             "tracing_include_content": self.tracing_include_content,
+            "tracing_otlp_endpoint": self.tracing_otlp_endpoint,
+            "tracing_send_to_logfire": self.tracing_send_to_logfire,
             "provider_api_bases": dict(self.provider_api_bases),
             "agents": dict(self.agents),
             "projects": dict(self.projects),
@@ -603,6 +607,11 @@ def load_config() -> Config:
         or os.getenv("LERIM_TRACING", "").strip().lower() in ("1", "true", "yes", "on"),
         tracing_include_httpx=bool(tracing.get("include_httpx", False)),
         tracing_include_content=bool(tracing.get("include_content", True)),
+        tracing_otlp_endpoint=_to_non_empty_string(
+            os.getenv("LERIM_TRACING_OTLP_ENDPOINT") or tracing.get("otlp_endpoint", "")
+        )
+        or None,
+        tracing_send_to_logfire=bool(tracing.get("send_to_logfire", True)),
         anthropic_api_key=_to_non_empty_string(os.environ.get("ANTHROPIC_API_KEY"))
         or None,
         openai_api_key=_to_non_empty_string(os.environ.get("OPENAI_API_KEY")) or None,
@@ -713,6 +722,8 @@ if __name__ == "__main__":
     assert isinstance(cfg.tracing_enabled, bool)
     assert isinstance(cfg.tracing_include_httpx, bool)
     assert isinstance(cfg.tracing_include_content, bool)
+    assert cfg.tracing_otlp_endpoint is None or isinstance(cfg.tracing_otlp_endpoint, str)
+    assert isinstance(cfg.tracing_send_to_logfire, bool)
     assert isinstance(cfg.agents, dict)
     assert isinstance(cfg.projects, dict)
     payload = cfg.public_dict()
