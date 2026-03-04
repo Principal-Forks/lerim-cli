@@ -1,0 +1,36 @@
+{
+	"version": "1.0.0",
+	"canvas": ".principal-views/ask/ask.otel.canvas",
+	"name": "Ask Operation",
+	"description": "Query accumulated memories with natural language",
+	"spanPattern": "ask.operation",
+	"mode": "span-tree",
+	"scenarioSelection": "first-match",
+	"scenarios": [
+		{
+			"id": "success",
+			"priority": 1,
+			"description": "Query answered successfully",
+			"template": {
+				"summary": "Ask completed in {{duration.ms}}ms (cost: ${{output.costUsd}})",
+				"events": {
+					"ask.started": "Query received ({{input.questionLength}} chars, memory: {{input.memoryRoot}})",
+					"ask.inference.complete": "LLM response generated ({{output.responseLength}} chars, session: {{output.sessionId}}, cost: ${{output.costUsd}})",
+					"ask.complete": "Query complete in {{duration.ms}}ms (error: {{output.hasError}})"
+				}
+			}
+		},
+		{
+			"id": "error",
+			"priority": 2,
+			"description": "Query failed with error",
+			"template": {
+				"summary": "Ask failed: {{error.message}}",
+				"events": {
+					"ask.started": "Query received ({{input.questionLength}} chars)",
+					"ask.error": "{{error.type}}: {{error.message}} after {{duration.ms}}ms"
+				}
+			}
+		}
+	]
+}

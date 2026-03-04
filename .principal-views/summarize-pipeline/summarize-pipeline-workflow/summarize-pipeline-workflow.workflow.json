@@ -1,0 +1,50 @@
+{
+	"version": "1.0.0",
+	"canvas": ".principal-views/summarize-pipeline/summarize-pipeline.otel.canvas",
+	"name": "Summarize Pipeline",
+	"description": "DSPy session summarization with user intent and narrative",
+	"spanPattern": "summarize.pipeline",
+	"mode": "span-tree",
+	"scenarioSelection": "first-match",
+	"scenarios": [
+		{
+			"id": "success-multi-window",
+			"priority": 1,
+			"description": "Multi-window summarization with merge",
+			"template": {
+				"summary": "Summary generated: {{output.intentWords}} intent words, {{output.narrativeWords}} narrative words",
+				"events": {
+					"summarize.started": "Starting summarization ({{input.transcriptLength}} chars, {{input.windowCount}} windows, guidance: {{input.hasGuidance}})",
+					"summarize.window.complete": "Window {{window.index}}/{{window.totalWindows}} partial done",
+					"summarize.merge.complete": "Merged {{output.partialCount}} partial summaries",
+					"summarize.complete": "Summary complete in {{duration.ms}}ms (title: {{output.titleLength}} chars, intent: {{output.intentWords}} words, narrative: {{output.narrativeWords}} words, {{output.tagCount}} tags)"
+				}
+			}
+		},
+		{
+			"id": "success-single-window",
+			"priority": 2,
+			"description": "Single window direct summarization",
+			"template": {
+				"summary": "Summary generated in {{duration.ms}}ms",
+				"events": {
+					"summarize.started": "Starting summarization ({{input.transcriptLength}} chars, 1 window, guidance: {{input.hasGuidance}})",
+					"summarize.skip_merge": "Single window - direct summary (mode: {{output.mode}})",
+					"summarize.complete": "Summary complete in {{duration.ms}}ms (title: {{output.titleLength}} chars, intent: {{output.intentWords}} words, narrative: {{output.narrativeWords}} words, {{output.tagCount}} tags)"
+				}
+			}
+		},
+		{
+			"id": "error",
+			"priority": 3,
+			"description": "Summarization failed",
+			"template": {
+				"summary": "Summarization failed: {{error.message}}",
+				"events": {
+					"summarize.started": "Starting summarization ({{input.transcriptLength}} chars)",
+					"summarize.error": "{{error.type}}: {{error.message}} after {{duration.ms}}ms"
+				}
+			}
+		}
+	]
+}

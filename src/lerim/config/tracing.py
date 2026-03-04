@@ -13,16 +13,16 @@ from lerim.config.settings import Config
 
 
 def _make_otlp_processor(endpoint: str):
-    """Create an OTLP span processor for the given endpoint.
+    """Create an OTLP span processor that sends protobuf to the given endpoint.
 
+    Uses the standard OTLPSpanExporter which sends protobuf format.
     Returns None if the opentelemetry exporter is not installed.
     """
     try:
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-            OTLPSpanExporter,
-        )
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 
+        # OTLPSpanExporter sends protobuf by default with Content-Type: application/x-protobuf
         exporter = OTLPSpanExporter(endpoint=endpoint)
         return SimpleSpanProcessor(exporter)
     except ImportError:

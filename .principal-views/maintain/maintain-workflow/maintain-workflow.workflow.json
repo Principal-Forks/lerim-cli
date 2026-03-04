@@ -1,0 +1,53 @@
+{
+	"version": "1.0.0",
+	"canvas": ".principal-views/maintain/maintain.otel.canvas",
+	"name": "Maintain Operation",
+	"description": "Memory refinement, merging, archival, and confidence decay",
+	"spanPattern": "maintain.operation",
+	"mode": "span-tree",
+	"scenarioSelection": "first-match",
+	"scenarios": [
+		{
+			"id": "success",
+			"priority": 1,
+			"description": "Maintain completed successfully across all projects",
+			"template": {
+				"summary": "Maintain completed: {{output.projectsProcessed}} projects, {{output.merged}} merged, {{output.archived}} archived",
+				"events": {
+					"maintain.started": "Starting maintain (trigger: {{trigger}}, projects: {{input.projectCount}}, dry: {{input.dryRun}})",
+					"maintain.scan.complete": "Scanned {{output.memoriesScanned}} memories: {{output.duplicatesFound}} duplicates, {{output.lowValueFound}} low-value, {{output.decayCandidates}} decay candidates",
+					"maintain.actions.complete": "Actions applied: {{output.merged}} merged, {{output.archived}} archived, {{output.consolidated}} consolidated, {{output.decayed}} decayed",
+					"maintain.project.complete": "Project {{project.name}} ({{project.path}}): {{output.merged}} merged, {{output.archived}} archived, {{output.consolidated}} consolidated, {{output.decayed}} decayed (cost: ${{output.costUsd}})",
+					"maintain.complete": "Maintain {{output.status}} in {{duration.ms}}ms (exit: {{output.exitCode}}, {{output.projectsProcessed}} projects, cost: ${{output.costUsd}})"
+				}
+			}
+		},
+		{
+			"id": "partial",
+			"priority": 2,
+			"description": "Maintain completed with some project failures",
+			"template": {
+				"summary": "Maintain partial: {{output.projectsProcessed}} succeeded, {{output.projectsFailed}} failed",
+				"events": {
+					"maintain.started": "Starting maintain (trigger: {{trigger}}, projects: {{input.projectCount}})",
+					"maintain.actions.complete": "Actions applied: {{output.merged}} merged, {{output.archived}} archived, {{output.consolidated}} consolidated, {{output.decayed}} decayed",
+					"maintain.project.complete": "Project {{project.name}} ({{project.path}}): {{output.merged}} merged, {{output.archived}} archived, {{output.consolidated}} consolidated, {{output.decayed}} decayed (cost: ${{output.costUsd}})",
+					"maintain.error": "Project {{error.project}} failed: {{error.type}} - {{error.message}} (stage: {{error.stage}})",
+					"maintain.complete": "Maintain {{output.status}} (exit: {{output.exitCode}}, {{output.projectsProcessed}} succeeded, {{output.projectsFailed}} failed)"
+				}
+			}
+		},
+		{
+			"id": "lock-busy",
+			"priority": 3,
+			"description": "Maintain blocked by active lock",
+			"template": {
+				"summary": "Maintain blocked: lock held by {{lock.owner}}",
+				"events": {
+					"maintain.started": "Starting maintain (trigger: {{trigger}})",
+					"maintain.lock_busy": "Lock busy - held by {{lock.owner}} (pid: {{lock.pid}}), exiting after {{duration.ms}}ms"
+				}
+			}
+		}
+	]
+}

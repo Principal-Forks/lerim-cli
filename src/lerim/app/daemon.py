@@ -636,104 +636,215 @@ def run_maintain_once(
     reload_config()
 
     started = _now_iso()
+    config = get_config()
+    projects = config.projects or {}
+    if not projects:
+        projects = {"global": str(Path.cwd())}
 
-    if dry_run:
-        _record_service_event(
-            record_service_run,
-            job_type="maintain",
-            status="completed",
-            started_at=started,
-            trigger=trigger,
-            details={"dry_run": True},
-        )
-        return EXIT_OK, {"dry_run": True}
-
-    writer = ServiceLock(lock_path(WRITER_LOCK_NAME), stale_seconds=60)
+    # Start OTEL span for maintain operation
+    span = _tracer.start_span("maintain.operation")
     try:
-        writer.acquire("maintain", "lerim maintain")
-    except LockBusyError as exc:
-        _record_service_event(
-            record_service_run,
-            job_type="maintain",
-            status="lock_busy",
-            started_at=started,
-            trigger=trigger,
-            details={"error": str(exc)},
+        # Emit maintain.started event
+        span.add_event(
+            "maintain.started",
+            attributes={
+                "trigger": trigger,
+                "input.projectCount": len(projects),
+                "input.dryRun": dry_run,
+            },
         )
-        return EXIT_LOCK_BUSY, {"error": str(exc)}
 
-    try:
-        config = get_config()
-        projects = config.projects or {}
-        if not projects:
-            # No registered projects — maintain CWD-based fallback.
-            projects = {"global": str(Path.cwd())}
+        if dry_run:
+            # Emit maintain.complete for dry run
+            span.add_event(
+                "maintain.complete",
+                attributes={
+                    "output.status": "completed",
+                    "output.exitCode": EXIT_OK,
+                    "output.projectsProcessed": 0,
+                    "output.projectsFailed": 0,
+                    "duration.ms": int((time.monotonic() - t0) * 1000),
+                },
+            )
+            _record_service_event(
+                record_service_run,
+                job_type="maintain",
+                status="completed",
+                started_at=started,
+                trigger=trigger,
+                details={"dry_run": True},
+            )
+            return EXIT_OK, {"dry_run": True}
 
-        results: dict[str, dict] = {}
-        failed_projects: list[str] = []
-        for project_name, project_path_str in projects.items():
-            project_path = Path(project_path_str).expanduser().resolve()
-            if not project_path.is_dir():
-                continue
-            project_memory = str(project_path / ".lerim" / "memory")
-            try:
-                agent = LerimAgent(default_cwd=str(project_path))
-                result = agent.maintain(memory_root=project_memory)
-                results[project_name] = result
-                # Activity log per project.
-                counts = (
-                    (result.get("counts") or {}) if isinstance(result, dict) else {}
-                )
-                parts = []
-                for key in ("merged", "archived", "consolidated", "decayed"):
-                    val = counts.get(key, 0)
-                    if val:
-                        parts.append(f"{val} {key}")
-                if parts:
-                    maintain_cost = float(result.get("cost_usd") or 0)
-                    log_activity(
-                        "maintain",
-                        project_name,
-                        ", ".join(parts),
-                        time.monotonic() - t0,
-                        cost_usd=maintain_cost,
+        writer = ServiceLock(lock_path(WRITER_LOCK_NAME), stale_seconds=60)
+        try:
+            writer.acquire("maintain", "lerim maintain")
+        except LockBusyError as exc:
+            # Emit maintain.lock_busy event for early exit
+            lock_state = exc.state or {}
+            span.add_event(
+                "maintain.lock_busy",
+                attributes={
+                    "lock.owner": str(lock_state.get("owner", "unknown")),
+                    "lock.pid": int(lock_state.get("pid", 0)),
+                    "duration.ms": int((time.monotonic() - t0) * 1000),
+                },
+            )
+            _record_service_event(
+                record_service_run,
+                job_type="maintain",
+                status="lock_busy",
+                started_at=started,
+                trigger=trigger,
+                details={"error": str(exc)},
+            )
+            return EXIT_LOCK_BUSY, {"error": str(exc)}
+
+        try:
+            results: dict[str, dict] = {}
+            failed_projects: list[str] = []
+            total_cost_usd = 0.0
+            total_merged = 0
+            total_archived = 0
+            total_consolidated = 0
+            total_decayed = 0
+
+            for project_name, project_path_str in projects.items():
+                project_path = Path(project_path_str).expanduser().resolve()
+                if not project_path.is_dir():
+                    continue
+                project_memory = str(project_path / ".lerim" / "memory")
+                try:
+                    agent = LerimAgent(default_cwd=str(project_path))
+                    result = agent.maintain(memory_root=project_memory)
+                    results[project_name] = result
+                    # Extract counts for OTEL and activity log
+                    counts = (
+                        (result.get("counts") or {}) if isinstance(result, dict) else {}
                     )
-            except Exception as exc:
-                failed_projects.append(project_name)
-                results[project_name] = {"error": str(exc)}
+                    merged = int(counts.get("merged", 0))
+                    archived = int(counts.get("archived", 0))
+                    consolidated = int(counts.get("consolidated", 0))
+                    decayed = int(counts.get("decayed", 0))
+                    project_cost = float(result.get("cost_usd") or 0)
 
-        status = (
-            "failed"
-            if failed_projects and not (set(projects) - set(failed_projects))
-            else ("partial" if failed_projects else "completed")
-        )
-        details = {"projects": results}
-        _record_service_event(
-            record_service_run,
-            job_type="maintain",
-            status=status,
-            started_at=started,
-            trigger=trigger,
-            details=details,
-        )
-        code = (
-            EXIT_FATAL
-            if status == "failed"
-            else (EXIT_PARTIAL if status == "partial" else EXIT_OK)
-        )
-        return code, details
-    except Exception as exc:
-        _record_service_event(
-            record_service_run,
-            job_type="maintain",
-            status="failed",
-            started_at=started,
-            trigger=trigger,
-            details={"error": str(exc)},
-        )
-        return EXIT_FATAL, {"error": str(exc)}
+                    total_merged += merged
+                    total_archived += archived
+                    total_consolidated += consolidated
+                    total_decayed += decayed
+                    total_cost_usd += project_cost
+
+                    # Emit maintain.project.complete event
+                    span.add_event(
+                        "maintain.project.complete",
+                        attributes={
+                            "project.name": project_name,
+                            "project.path": str(project_path),
+                            "output.merged": merged,
+                            "output.archived": archived,
+                            "output.consolidated": consolidated,
+                            "output.decayed": decayed,
+                            "output.costUsd": project_cost,
+                        },
+                    )
+
+                    # Activity log per project
+                    parts = []
+                    for key in ("merged", "archived", "consolidated", "decayed"):
+                        val = counts.get(key, 0)
+                        if val:
+                            parts.append(f"{val} {key}")
+                    if parts:
+                        log_activity(
+                            "maintain",
+                            project_name,
+                            ", ".join(parts),
+                            time.monotonic() - t0,
+                            cost_usd=project_cost,
+                        )
+                except Exception as exc:
+                    failed_projects.append(project_name)
+                    results[project_name] = {"error": str(exc)}
+                    # Emit maintain.error for project-specific failure
+                    span.add_event(
+                        "maintain.error",
+                        attributes={
+                            "error.type": type(exc).__name__,
+                            "error.message": str(exc),
+                            "error.stage": "actions",
+                            "error.project": project_name,
+                        },
+                    )
+
+            # Emit maintain.actions.complete with totals
+            span.add_event(
+                "maintain.actions.complete",
+                attributes={
+                    "output.merged": total_merged,
+                    "output.archived": total_archived,
+                    "output.consolidated": total_consolidated,
+                    "output.decayed": total_decayed,
+                },
+            )
+
+            status = (
+                "failed"
+                if failed_projects and not (set(projects) - set(failed_projects))
+                else ("partial" if failed_projects else "completed")
+            )
+            details = {"projects": results}
+            code = (
+                EXIT_FATAL
+                if status == "failed"
+                else (EXIT_PARTIAL if status == "partial" else EXIT_OK)
+            )
+
+            # Emit maintain.complete event
+            duration_ms = int((time.monotonic() - t0) * 1000)
+            span.add_event(
+                "maintain.complete",
+                attributes={
+                    "output.status": status,
+                    "output.exitCode": code,
+                    "output.projectsProcessed": len(projects) - len(failed_projects),
+                    "output.projectsFailed": len(failed_projects),
+                    "output.costUsd": total_cost_usd,
+                    "duration.ms": duration_ms,
+                },
+            )
+
+            _record_service_event(
+                record_service_run,
+                job_type="maintain",
+                status=status,
+                started_at=started,
+                trigger=trigger,
+                details=details,
+            )
+            return code, details
+        except Exception as exc:
+            # Emit maintain.error for unexpected failure
+            span.add_event(
+                "maintain.error",
+                attributes={
+                    "error.type": type(exc).__name__,
+                    "error.message": str(exc),
+                    "error.stage": "actions",
+                },
+            )
+            _record_service_event(
+                record_service_run,
+                job_type="maintain",
+                status="failed",
+                started_at=started,
+                trigger=trigger,
+                details={"error": str(exc)},
+            )
+            return EXIT_FATAL, {"error": str(exc)}
+        finally:
+            writer.release()
     finally:
-        writer.release()
+        span.end()
 
 
 def run_daemon_once(max_sessions: int | None = None) -> dict:

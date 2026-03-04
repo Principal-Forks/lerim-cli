@@ -1,0 +1,38 @@
+{
+	"version": "1.0.0",
+	"canvas": ".principal-views/llm-internals/llm-internals.otel.canvas",
+	"name": "LLM Internals",
+	"description": "Auto-instrumented LLM operations via Logfire",
+	"spanPattern": "pydantic_ai.agent.run",
+	"mode": "span-tree",
+	"scenarioSelection": "first-match",
+	"scenarios": [
+		{
+			"id": "agent-with-tools",
+			"priority": 1,
+			"description": "Agent run with tool calls",
+			"template": {
+				"summary": "Agent {{agent.name}} completed with {{tokens.input}}+{{tokens.output}} tokens",
+				"events": {
+					"pydantic_ai.agent.run": "Agent {{agent.name}} starting (model: {{agent.model}}, prompt: {{run.prompt_length}} chars)",
+					"pydantic_ai.model.request": "LLM request to {{model.provider}}/{{model.name}}: {{tokens.input}}→{{tokens.output}} tokens in {{duration.ms}}ms",
+					"pydantic_ai.tool.call": "Tool {{tool.name}}: {{tool.success}} in {{duration.ms}}ms",
+					"httpx.request": "{{http.method}} {{http.url}} → {{http.status_code}} in {{duration.ms}}ms"
+				}
+			}
+		},
+		{
+			"id": "dspy-pipeline",
+			"priority": 2,
+			"description": "DSPy ChainOfThought execution",
+			"template": {
+				"summary": "DSPy {{signature.name}} completed",
+				"events": {
+					"dspy.ChainOfThought": "ChainOfThought: {{signature.name}} (inputs: {{signature.inputs}}, outputs: {{signature.outputs}})",
+					"dspy.Predict": "Predict via {{model.name}}: {{tokens.input}}→{{tokens.output}} tokens",
+					"httpx.request": "{{http.method}} {{http.url}} → {{http.status_code}}"
+				}
+			}
+		}
+	]
+}

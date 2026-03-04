@@ -1,0 +1,440 @@
+{
+	"nodes": [
+		{
+			"id": "maintain-started",
+			"type": "text",
+			"x": 100,
+			"y": 50,
+			"width": 200,
+			"height": 100,
+			"text": "# Maintain Started\n\nMaintain operation begins.",
+			"pv": {
+				"event": {
+					"name": "maintain.started",
+					"attributes": {
+						"trigger": {
+							"type": "string",
+							"required": true,
+							"description": "What triggered maintain: daemon, manual"
+						},
+						"input.projectCount": {
+							"type": "number",
+							"required": true,
+							"description": "Number of registered projects to process"
+						},
+						"input.dryRun": {
+							"type": "boolean",
+							"required": false
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/app/daemon.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "lifecycle",
+					"files": ["src/lerim/app/daemon.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#22c55e",
+				"stroke": "#16a34a",
+				"status": "implemented"
+			},
+			"color": "#22c55e"
+		},
+		{
+			"id": "scan-complete",
+			"type": "text",
+			"x": 100,
+			"y": 250,
+			"width": 200,
+			"height": 100,
+			"text": "# Scan Complete\n\nMemories scanned and analyzed.",
+			"pv": {
+				"event": {
+					"name": "maintain.scan.complete",
+					"attributes": {
+						"output.memoriesScanned": {
+							"type": "number",
+							"required": true
+						},
+						"output.duplicatesFound": {
+							"type": "number",
+							"required": true
+						},
+						"output.lowValueFound": {
+							"type": "number",
+							"required": true
+						},
+						"output.decayCandidates": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/runtime/agent.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "operation",
+					"files": ["src/lerim/runtime/agent.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#3b82f6",
+				"stroke": "#1d4ed8",
+				"status": "approved"
+			},
+			"color": "#3b82f6"
+		},
+		{
+			"id": "actions-complete",
+			"type": "text",
+			"x": 100,
+			"y": 450,
+			"width": 200,
+			"height": 100,
+			"text": "# Actions Complete\n\nMaintenance actions applied.",
+			"pv": {
+				"event": {
+					"name": "maintain.actions.complete",
+					"attributes": {
+						"output.merged": {
+							"type": "number",
+							"required": true,
+							"description": "Duplicate memories merged"
+						},
+						"output.archived": {
+							"type": "number",
+							"required": true,
+							"description": "Low-value memories archived"
+						},
+						"output.consolidated": {
+							"type": "number",
+							"required": true,
+							"description": "Related memories consolidated"
+						},
+						"output.decayed": {
+							"type": "number",
+							"required": true,
+							"description": "Confidence decay applied"
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/app/daemon.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "operation",
+					"files": ["src/lerim/app/daemon.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#3b82f6",
+				"stroke": "#1d4ed8",
+				"status": "implemented"
+			},
+			"color": "#3b82f6"
+		},
+		{
+			"id": "maintain-complete",
+			"type": "text",
+			"x": 100,
+			"y": 650,
+			"width": 200,
+			"height": 100,
+			"text": "# Maintain Complete\n\nMaintain operation finished.",
+			"pv": {
+				"event": {
+					"name": "maintain.complete",
+					"attributes": {
+						"output.status": {
+							"type": "string",
+							"required": true,
+							"description": "completed, partial, or failed"
+						},
+						"output.exitCode": {
+							"type": "number",
+							"required": true
+						},
+						"output.projectsProcessed": {
+							"type": "number",
+							"required": true
+						},
+						"output.projectsFailed": {
+							"type": "number",
+							"required": true
+						},
+						"output.costUsd": {
+							"type": "number",
+							"required": false
+						},
+						"duration.ms": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/app/daemon.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "lifecycle",
+					"files": ["src/lerim/app/daemon.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#22c55e",
+				"stroke": "#16a34a",
+				"status": "implemented"
+			},
+			"color": "#22c55e"
+		},
+		{
+			"id": "maintain-error",
+			"type": "text",
+			"x": 450,
+			"y": 250,
+			"width": 200,
+			"height": 100,
+			"text": "# Maintain Error\n\nMaintain operation failed.",
+			"pv": {
+				"event": {
+					"name": "maintain.error",
+					"attributes": {
+						"error.type": {
+							"type": "string",
+							"required": true
+						},
+						"error.message": {
+							"type": "string",
+							"required": true
+						},
+						"error.stage": {
+							"type": "string",
+							"required": false,
+							"description": "Stage where error occurred: lock, scan, actions"
+						},
+						"error.project": {
+							"type": "string",
+							"required": false,
+							"description": "Project name if error is project-specific"
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/app/daemon.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "error",
+					"files": ["src/lerim/app/daemon.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#ef4444",
+				"stroke": "#dc2626",
+				"status": "implemented"
+			},
+			"color": "#ef4444"
+		},
+		{
+			"id": "project-complete",
+			"type": "text",
+			"x": 450,
+			"y": 450,
+			"width": 200,
+			"height": 100,
+			"text": "# Project Complete\n\nSingle project maintenance done.",
+			"pv": {
+				"event": {
+					"name": "maintain.project.complete",
+					"attributes": {
+						"project.name": {
+							"type": "string",
+							"required": true
+						},
+						"project.path": {
+							"type": "string",
+							"required": true
+						},
+						"output.merged": {
+							"type": "number",
+							"required": true
+						},
+						"output.archived": {
+							"type": "number",
+							"required": true
+						},
+						"output.consolidated": {
+							"type": "number",
+							"required": true
+						},
+						"output.decayed": {
+							"type": "number",
+							"required": true
+						},
+						"output.costUsd": {
+							"type": "number",
+							"required": false
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/app/daemon.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "operation",
+					"files": ["src/lerim/app/daemon.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#8b5cf6",
+				"stroke": "#7c3aed",
+				"status": "implemented"
+			},
+			"color": "#8b5cf6"
+		},
+		{
+			"id": "lock-busy",
+			"type": "text",
+			"x": 450,
+			"y": 50,
+			"width": 200,
+			"height": 100,
+			"text": "# Lock Busy\n\nMaintain blocked by active lock.",
+			"pv": {
+				"event": {
+					"name": "maintain.lock_busy",
+					"attributes": {
+						"lock.owner": {
+							"type": "string",
+							"required": true,
+							"description": "Process holding the lock"
+						},
+						"lock.pid": {
+							"type": "number",
+							"required": false,
+							"description": "PID of lock holder"
+						},
+						"duration.ms": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/app/daemon.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "lifecycle",
+					"files": ["src/lerim/app/daemon.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#f97316",
+				"stroke": "#ea580c",
+				"status": "implemented"
+			},
+			"color": "#f97316"
+		}
+	],
+	"edges": [
+		{
+			"id": "started-to-scan",
+			"fromNode": "maintain-started",
+			"fromSide": "bottom",
+			"toNode": "scan-complete",
+			"toSide": "top",
+			"pv": {
+				"edgeType": "flow"
+			}
+		},
+		{
+			"id": "scan-to-actions",
+			"fromNode": "scan-complete",
+			"fromSide": "bottom",
+			"toNode": "actions-complete",
+			"toSide": "top",
+			"pv": {
+				"edgeType": "flow"
+			}
+		},
+		{
+			"id": "actions-to-complete",
+			"fromNode": "actions-complete",
+			"fromSide": "bottom",
+			"toNode": "maintain-complete",
+			"toSide": "top",
+			"pv": {
+				"edgeType": "flow"
+			}
+		},
+		{
+			"id": "started-to-error",
+			"fromNode": "maintain-started",
+			"fromSide": "right",
+			"toNode": "maintain-error",
+			"toSide": "left",
+			"pv": {
+				"edgeType": "error"
+			}
+		},
+		{
+			"id": "scan-to-error",
+			"fromNode": "scan-complete",
+			"fromSide": "right",
+			"toNode": "maintain-error",
+			"toSide": "left",
+			"pv": {
+				"edgeType": "error"
+			}
+		},
+		{
+			"id": "actions-to-project",
+			"fromNode": "actions-complete",
+			"fromSide": "right",
+			"toNode": "project-complete",
+			"toSide": "left",
+			"pv": {
+				"edgeType": "iteration"
+			}
+		},
+		{
+			"id": "started-to-lock-busy",
+			"fromNode": "maintain-started",
+			"fromSide": "right",
+			"toNode": "lock-busy",
+			"toSide": "left",
+			"pv": {
+				"edgeType": "error"
+			}
+		}
+	],
+	"pv": {
+		"name": "Maintain Operation",
+		"version": "1.0.0",
+		"description": "OpenTelemetry events for lerim maintain operation - memory refinement, merging, archival, and decay",
+		"markdown": ".principal-views/maintain/maintain.md",
+		"edgeTypes": {
+			"flow": {
+				"label": "Flow",
+				"style": "solid",
+				"width": 2,
+				"color": "#64748b"
+			},
+			"error": {
+				"label": "Error Path",
+				"style": "dashed",
+				"width": 2,
+				"color": "#ef4444"
+			},
+			"iteration": {
+				"label": "Iteration",
+				"style": "dotted",
+				"width": 2,
+				"color": "#8b5cf6"
+			}
+		}
+	}
+}

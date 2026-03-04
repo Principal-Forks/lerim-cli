@@ -1,0 +1,325 @@
+{
+	"nodes": [
+		{
+			"id": "agent-run",
+			"type": "text",
+			"x": 100,
+			"y": 50,
+			"width": 220,
+			"height": 100,
+			"text": "# Agent Run\n\nPydanticAI agent execution.",
+			"pv": {
+				"event": {
+					"name": "pydantic_ai.agent.run",
+					"attributes": {
+						"agent.name": {
+							"type": "string",
+							"required": true,
+							"description": "Agent identifier"
+						},
+						"agent.model": {
+							"type": "string",
+							"required": true,
+							"description": "LLM model name"
+						},
+						"run.prompt_length": {
+							"type": "number",
+							"required": false
+						}
+					}
+				},
+				"sources": ["src/lerim/runtime/agent.py"],
+				"otel": {
+					"kind": "span",
+					"category": "lifecycle"
+				},
+				"shape": "rectangle",
+				"fill": "#06b6d4",
+				"stroke": "#0891b2",
+				"status": "draft"
+			},
+			"color": "#06b6d4"
+		},
+		{
+			"id": "model-request",
+			"type": "text",
+			"x": 100,
+			"y": 200,
+			"width": 220,
+			"height": 100,
+			"text": "# Model Request\n\nLLM API call to provider.",
+			"pv": {
+				"event": {
+					"name": "pydantic_ai.model.request",
+					"attributes": {
+						"model.name": {
+							"type": "string",
+							"required": true
+						},
+						"model.provider": {
+							"type": "string",
+							"required": true,
+							"description": "openai, anthropic, openrouter, etc."
+						},
+						"tokens.input": {
+							"type": "number",
+							"required": true
+						},
+						"tokens.output": {
+							"type": "number",
+							"required": true
+						},
+						"duration.ms": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": ["src/lerim/runtime/providers.py"],
+				"otel": {
+					"kind": "span",
+					"category": "operation"
+				},
+				"shape": "rectangle",
+				"fill": "#06b6d4",
+				"stroke": "#0891b2",
+				"status": "draft"
+			},
+			"color": "#06b6d4"
+		},
+		{
+			"id": "tool-call",
+			"type": "text",
+			"x": 100,
+			"y": 350,
+			"width": 220,
+			"height": 100,
+			"text": "# Tool Call\n\nAgent tool invocation.",
+			"pv": {
+				"event": {
+					"name": "pydantic_ai.tool.call",
+					"attributes": {
+						"tool.name": {
+							"type": "string",
+							"required": true,
+							"description": "read_file, write_memory, glob, grep, etc."
+						},
+						"tool.success": {
+							"type": "boolean",
+							"required": true
+						},
+						"duration.ms": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": ["src/lerim/runtime/tools.py"],
+				"otel": {
+					"kind": "span",
+					"category": "operation"
+				},
+				"shape": "rectangle",
+				"fill": "#06b6d4",
+				"stroke": "#0891b2",
+				"status": "draft"
+			},
+			"color": "#06b6d4"
+		},
+		{
+			"id": "dspy-cot",
+			"type": "text",
+			"x": 420,
+			"y": 50,
+			"width": 220,
+			"height": 100,
+			"text": "# ChainOfThought\n\nDSPy reasoning step.",
+			"pv": {
+				"event": {
+					"name": "dspy.ChainOfThought",
+					"attributes": {
+						"signature.name": {
+							"type": "string",
+							"required": true,
+							"description": "MemoryExtractSignature, TraceSummarySignature, etc."
+						},
+						"signature.inputs": {
+							"type": "string",
+							"required": false
+						},
+						"signature.outputs": {
+							"type": "string",
+							"required": false
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/memory/extract_pipeline.py",
+					"src/lerim/memory/summarization_pipeline.py"
+				],
+				"otel": {
+					"kind": "span",
+					"category": "operation"
+				},
+				"shape": "rectangle",
+				"fill": "#a855f7",
+				"stroke": "#9333ea",
+				"status": "draft"
+			},
+			"color": "#a855f7"
+		},
+		{
+			"id": "dspy-predict",
+			"type": "text",
+			"x": 420,
+			"y": 200,
+			"width": 220,
+			"height": 100,
+			"text": "# Predict\n\nDSPy LLM prediction.",
+			"pv": {
+				"event": {
+					"name": "dspy.Predict",
+					"attributes": {
+						"model.name": {
+							"type": "string",
+							"required": true
+						},
+						"tokens.input": {
+							"type": "number",
+							"required": false
+						},
+						"tokens.output": {
+							"type": "number",
+							"required": false
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/memory/extract_pipeline.py",
+					"src/lerim/memory/summarization_pipeline.py"
+				],
+				"otel": {
+					"kind": "span",
+					"category": "operation"
+				},
+				"shape": "rectangle",
+				"fill": "#a855f7",
+				"stroke": "#9333ea",
+				"status": "draft"
+			},
+			"color": "#a855f7"
+		},
+		{
+			"id": "httpx-request",
+			"type": "text",
+			"x": 420,
+			"y": 350,
+			"width": 220,
+			"height": 100,
+			"text": "# HTTP Request\n\nOutbound API call.",
+			"pv": {
+				"event": {
+					"name": "httpx.request",
+					"attributes": {
+						"http.method": {
+							"type": "string",
+							"required": true
+						},
+						"http.url": {
+							"type": "string",
+							"required": true
+						},
+						"http.status_code": {
+							"type": "number",
+							"required": true
+						},
+						"duration.ms": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": ["src/lerim/runtime/providers.py"],
+				"otel": {
+					"kind": "span",
+					"category": "operation"
+				},
+				"shape": "rectangle",
+				"fill": "#f59e0b",
+				"stroke": "#d97706",
+				"status": "draft"
+			},
+			"color": "#f59e0b"
+		}
+	],
+	"edges": [
+		{
+			"id": "agent-to-model",
+			"fromNode": "agent-run",
+			"fromSide": "bottom",
+			"toNode": "model-request",
+			"toSide": "top",
+			"pv": { "edgeType": "contains" }
+		},
+		{
+			"id": "agent-to-tool",
+			"fromNode": "agent-run",
+			"fromSide": "bottom",
+			"toNode": "tool-call",
+			"toSide": "top",
+			"pv": { "edgeType": "contains" }
+		},
+		{
+			"id": "model-to-tool",
+			"fromNode": "model-request",
+			"fromSide": "bottom",
+			"toNode": "tool-call",
+			"toSide": "top",
+			"pv": { "edgeType": "triggers" }
+		},
+		{
+			"id": "cot-to-predict",
+			"fromNode": "dspy-cot",
+			"fromSide": "bottom",
+			"toNode": "dspy-predict",
+			"toSide": "top",
+			"pv": { "edgeType": "contains" }
+		},
+		{
+			"id": "model-to-httpx",
+			"fromNode": "model-request",
+			"fromSide": "right",
+			"toNode": "httpx-request",
+			"toSide": "left",
+			"pv": { "edgeType": "triggers" }
+		},
+		{
+			"id": "predict-to-httpx",
+			"fromNode": "dspy-predict",
+			"fromSide": "bottom",
+			"toNode": "httpx-request",
+			"toSide": "top",
+			"pv": { "edgeType": "triggers" }
+		}
+	],
+	"pv": {
+		"name": "LLM Internals",
+		"version": "1.0.0",
+		"description": "Auto-instrumented LLM operations via Logfire (PydanticAI, DSPy, httpx)",
+		"markdown": ".principal-views/llm-internals/llm-internals.md",
+		"edgeTypes": {
+			"contains": {
+				"label": "Contains",
+				"style": "solid",
+				"width": 2,
+				"color": "#64748b"
+			},
+			"triggers": {
+				"label": "Triggers",
+				"style": "dashed",
+				"width": 2,
+				"color": "#94a3b8"
+			}
+		}
+	}
+}

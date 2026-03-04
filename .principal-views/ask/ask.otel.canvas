@@ -1,0 +1,226 @@
+{
+	"nodes": [
+		{
+			"id": "ask-started",
+			"type": "text",
+			"x": 100,
+			"y": 50,
+			"width": 200,
+			"height": 100,
+			"text": "# Ask Started\n\nQuery operation begins.",
+			"pv": {
+				"event": {
+					"name": "ask.started",
+					"attributes": {
+						"input.questionLength": {
+							"type": "number",
+							"required": true,
+							"description": "Length of the question in characters"
+						},
+						"input.memoryRoot": {
+							"type": "string",
+							"required": true,
+							"description": "Memory directory being queried"
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/app/api.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "lifecycle",
+					"files": ["src/lerim/app/api.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#22c55e",
+				"stroke": "#16a34a",
+				"status": "implemented"
+			},
+			"color": "#22c55e"
+		},
+		{
+			"id": "ask-inference",
+			"type": "text",
+			"x": 100,
+			"y": 250,
+			"width": 200,
+			"height": 100,
+			"text": "# Inference Complete\n\nLLM generated response.",
+			"pv": {
+				"event": {
+					"name": "ask.inference.complete",
+					"attributes": {
+						"output.responseLength": {
+							"type": "number",
+							"required": true,
+							"description": "Length of LLM response"
+						},
+						"output.sessionId": {
+							"type": "string",
+							"required": true
+						},
+						"output.costUsd": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/app/api.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "operation",
+					"files": ["src/lerim/app/api.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#3b82f6",
+				"stroke": "#1d4ed8",
+				"status": "implemented"
+			},
+			"color": "#3b82f6"
+		},
+		{
+			"id": "ask-complete",
+			"type": "text",
+			"x": 100,
+			"y": 450,
+			"width": 200,
+			"height": 100,
+			"text": "# Ask Complete\n\nQuery answered successfully.",
+			"pv": {
+				"event": {
+					"name": "ask.complete",
+					"attributes": {
+						"output.hasError": {
+							"type": "boolean",
+							"required": true,
+							"description": "Whether response looks like an auth error"
+						},
+						"duration.ms": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/app/api.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "lifecycle",
+					"files": ["src/lerim/app/api.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#22c55e",
+				"stroke": "#16a34a",
+				"status": "implemented"
+			},
+			"color": "#22c55e"
+		},
+		{
+			"id": "ask-error",
+			"type": "text",
+			"x": 400,
+			"y": 250,
+			"width": 200,
+			"height": 100,
+			"text": "# Ask Error\n\nQuery failed.",
+			"pv": {
+				"event": {
+					"name": "ask.error",
+					"attributes": {
+						"error.type": {
+							"type": "string",
+							"required": true
+						},
+						"error.message": {
+							"type": "string",
+							"required": true
+						},
+						"duration.ms": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/app/api.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "error",
+					"files": ["src/lerim/app/api.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#ef4444",
+				"stroke": "#dc2626",
+				"status": "implemented"
+			},
+			"color": "#ef4444"
+		}
+	],
+	"edges": [
+		{
+			"id": "started-to-inference",
+			"fromNode": "ask-started",
+			"fromSide": "bottom",
+			"toNode": "ask-inference",
+			"toSide": "top",
+			"pv": {
+				"edgeType": "flow"
+			}
+		},
+		{
+			"id": "inference-to-complete",
+			"fromNode": "ask-inference",
+			"fromSide": "bottom",
+			"toNode": "ask-complete",
+			"toSide": "top",
+			"pv": {
+				"edgeType": "flow"
+			}
+		},
+		{
+			"id": "started-to-error",
+			"fromNode": "ask-started",
+			"fromSide": "right",
+			"toNode": "ask-error",
+			"toSide": "left",
+			"pv": {
+				"edgeType": "error"
+			}
+		},
+		{
+			"id": "inference-to-error",
+			"fromNode": "ask-inference",
+			"fromSide": "right",
+			"toNode": "ask-error",
+			"toSide": "left",
+			"pv": {
+				"edgeType": "error"
+			}
+		}
+	],
+	"pv": {
+		"name": "Ask Operation",
+		"version": "1.0.0",
+		"description": "OpenTelemetry events for lerim ask - querying accumulated memories",
+		"markdown": ".principal-views/ask/ask.md",
+		"edgeTypes": {
+			"flow": {
+				"label": "Flow",
+				"style": "solid",
+				"width": 2,
+				"color": "#64748b"
+			},
+			"error": {
+				"label": "Error Path",
+				"style": "dashed",
+				"width": 2,
+				"color": "#ef4444"
+			}
+		}
+	}
+}

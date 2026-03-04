@@ -8,10 +8,16 @@ from __future__ import annotations
 
 import os
 import subprocess
+import time
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from opentelemetry import trace
+
+# Get tracer for ask operations
+_tracer = trace.get_tracer("lerim.ask", "0.1.0")
 
 from lerim import __version__
 from lerim.adapters.registry import (
@@ -58,23 +64,73 @@ def api_health() -> dict[str, Any]:
 
 def api_ask(question: str, limit: int = 12) -> dict[str, Any]:
     """Run one ask query against the runtime agent and return result dict."""
+    t0 = time.monotonic()
     config = get_config()
     memory_root = str(config.memory_dir)
-    hits: list[dict[str, Any]] = []
-    context_docs: list[dict[str, Any]] = []
-    prompt = build_ask_prompt(question, hits, context_docs, memory_root=memory_root)
-    agent = LerimAgent()
-    response, session_id, cost_usd = agent.ask(
-        prompt, cwd=str(Path.cwd()), memory_root=memory_root
-    )
-    error = looks_like_auth_error(response)
-    return {
-        "answer": response,
-        "agent_session_id": session_id,
-        "memories_used": [],
-        "error": bool(error),
-        "cost_usd": cost_usd,
-    }
+
+    # Start OTEL span for ask operation
+    span = _tracer.start_span("ask.operation")
+    try:
+        # Emit ask.started event
+        span.add_event(
+            "ask.started",
+            attributes={
+                "input.questionLength": len(question),
+                "input.memoryRoot": memory_root,
+            },
+        )
+
+        hits: list[dict[str, Any]] = []
+        context_docs: list[dict[str, Any]] = []
+        prompt = build_ask_prompt(question, hits, context_docs, memory_root=memory_root)
+        agent = LerimAgent()
+        response, session_id, cost_usd = agent.ask(
+            prompt, cwd=str(Path.cwd()), memory_root=memory_root
+        )
+
+        # Emit ask.inference.complete event
+        span.add_event(
+            "ask.inference.complete",
+            attributes={
+                "output.responseLength": len(response),
+                "output.sessionId": session_id,
+                "output.costUsd": cost_usd,
+            },
+        )
+
+        error = looks_like_auth_error(response)
+        duration_ms = int((time.monotonic() - t0) * 1000)
+
+        # Emit ask.complete event
+        span.add_event(
+            "ask.complete",
+            attributes={
+                "output.hasError": bool(error),
+                "duration.ms": duration_ms,
+            },
+        )
+
+        return {
+            "answer": response,
+            "agent_session_id": session_id,
+            "memories_used": [],
+            "error": bool(error),
+            "cost_usd": cost_usd,
+        }
+    except Exception as exc:
+        duration_ms = int((time.monotonic() - t0) * 1000)
+        # Emit ask.error event
+        span.add_event(
+            "ask.error",
+            attributes={
+                "error.type": type(exc).__name__,
+                "error.message": str(exc),
+                "duration.ms": duration_ms,
+            },
+        )
+        raise
+    finally:
+        span.end()
 
 
 def api_sync(

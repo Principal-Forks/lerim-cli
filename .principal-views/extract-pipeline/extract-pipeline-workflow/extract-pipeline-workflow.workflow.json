@@ -1,0 +1,51 @@
+{
+	"version": "1.0.0",
+	"canvas": ".principal-views/extract-pipeline/extract-pipeline.otel.canvas",
+	"name": "Extract Pipeline",
+	"description": "DSPy memory extraction with windowing and deduplication",
+	"spanPattern": "extract.pipeline",
+	"mode": "span-tree",
+	"scenarioSelection": "first-match",
+	"scenarios": [
+		{
+			"id": "success-multi-window",
+			"priority": 1,
+			"description": "Multi-window extraction with merge",
+			"template": {
+				"summary": "Extracted {{output.candidateCount}} memories ({{output.decisionCount}} decisions, {{output.learningCount}} learnings)",
+				"events": {
+					"extract.started": "Starting extraction ({{input.transcriptLength}} chars, {{input.windowCount}} windows, guidance: {{input.hasGuidance}})",
+					"extract.window.complete": "Window {{window.index}}: {{window.candidateCount}} candidates",
+					"extract.merge.complete": "Merged {{output.beforeCount}} → {{output.afterCount}} candidates",
+					"extract.complete": "Extraction complete in {{duration.ms}}ms: {{output.candidateCount}} candidates ({{output.decisionCount}} decisions, {{output.learningCount}} learnings)"
+				}
+			}
+		},
+		{
+			"id": "success-single-window",
+			"priority": 2,
+			"description": "Single window extraction (no merge needed)",
+			"template": {
+				"summary": "Extracted {{output.candidateCount}} memories in {{duration.ms}}ms",
+				"events": {
+					"extract.started": "Starting extraction ({{input.transcriptLength}} chars, 1 window)",
+					"extract.window.complete": "Window {{window.index}}: {{window.candidateCount}} candidates",
+					"extract.skip_merge": "Single window - skipping merge ({{output.candidateCount}} candidates)",
+					"extract.complete": "Extraction complete in {{duration.ms}}ms: {{output.candidateCount}} candidates ({{output.decisionCount}} decisions, {{output.learningCount}} learnings)"
+				}
+			}
+		},
+		{
+			"id": "error",
+			"priority": 3,
+			"description": "Extraction failed",
+			"template": {
+				"summary": "Extraction failed: {{error.message}}",
+				"events": {
+					"extract.started": "Starting extraction ({{input.transcriptLength}} chars)",
+					"extract.error": "{{error.type}}: {{error.message}} (window: {{error.windowIndex}}) after {{duration.ms}}ms"
+				}
+			}
+		}
+	]
+}

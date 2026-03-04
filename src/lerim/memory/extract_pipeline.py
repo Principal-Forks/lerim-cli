@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -15,8 +16,12 @@ from tempfile import TemporaryDirectory
 from typing import Any
 
 import dspy
+from opentelemetry import trace
 
 from lerim.config.settings import get_config
+
+# Get tracer for extract operations
+_tracer = trace.get_tracer("lerim.extract", "0.1.0")
 from lerim.memory.schemas import MemoryCandidate
 from lerim.memory.utils import configure_dspy_lm, window_transcript
 from lerim.runtime.cost_tracker import capture_dspy_cost
@@ -75,6 +80,7 @@ def _extract_candidates(
     guidance: str = "",
 ) -> list[dict[str, Any]]:
     """Run ChainOfThought extraction with windowing and return normalized candidates."""
+    t0 = time.monotonic()
     if not transcript.strip():
         return []
     config = get_config()
@@ -86,48 +92,140 @@ def _extract_candidates(
     met = metrics or {}
     guid = guidance.strip()
 
-    all_candidates: list[dict[str, Any]] = []
-    extractor = dspy.ChainOfThought(MemoryExtractSignature)
-    history_start = len(lm.history)
-    with dspy.context(lm=lm):
-        for window in windows:
-            result = extractor(
-                transcript=window, metadata=meta, metrics=met, guidance=guid
+    # Start OTEL span for extract pipeline
+    span = _tracer.start_span("extract.pipeline")
+    try:
+        # Emit extract.started event
+        span.add_event(
+            "extract.started",
+            attributes={
+                "input.transcriptLength": len(transcript),
+                "input.windowCount": len(windows),
+                "input.hasGuidance": bool(guid),
+            },
+        )
+
+        all_candidates: list[dict[str, Any]] = []
+        extractor = dspy.ChainOfThought(MemoryExtractSignature)
+        history_start = len(lm.history)
+        with dspy.context(lm=lm):
+            for window_idx, window in enumerate(windows):
+                result = extractor(
+                    transcript=window, metadata=meta, metrics=met, guidance=guid
+                )
+                primitives = getattr(result, "primitives", [])
+                window_count = 0
+                if isinstance(primitives, list):
+                    for item in primitives:
+                        if isinstance(item, MemoryCandidate):
+                            all_candidates.append(
+                                item.model_dump(mode="json", exclude_none=True)
+                            )
+                            window_count += 1
+                        elif isinstance(item, dict):
+                            all_candidates.append(item)
+                            window_count += 1
+
+                # Emit extract.window.complete event
+                span.add_event(
+                    "extract.window.complete",
+                    attributes={
+                        "window.index": window_idx,
+                        "window.candidateCount": window_count,
+                    },
+                )
+
+        if not all_candidates:
+            capture_dspy_cost(lm, history_start)
+            duration_ms = int((time.monotonic() - t0) * 1000)
+            span.add_event(
+                "extract.complete",
+                attributes={
+                    "output.candidateCount": 0,
+                    "output.decisionCount": 0,
+                    "output.learningCount": 0,
+                    "duration.ms": duration_ms,
+                },
             )
-            primitives = getattr(result, "primitives", [])
-            if isinstance(primitives, list):
-                for item in primitives:
-                    if isinstance(item, MemoryCandidate):
-                        all_candidates.append(
-                            item.model_dump(mode="json", exclude_none=True)
-                        )
-                    elif isinstance(item, dict):
-                        all_candidates.append(item)
+            return []
 
-    if not all_candidates:
+        # Single window: no merge needed
+        if len(windows) == 1:
+            capture_dspy_cost(lm, history_start)
+            # Emit extract.skip_merge for single-window case
+            span.add_event(
+                "extract.skip_merge",
+                attributes={
+                    "output.candidateCount": len(all_candidates),
+                },
+            )
+            duration_ms = int((time.monotonic() - t0) * 1000)
+            decision_count = sum(1 for c in all_candidates if c.get("primitive") == "decision")
+            learning_count = sum(1 for c in all_candidates if c.get("primitive") == "learning")
+            span.add_event(
+                "extract.complete",
+                attributes={
+                    "output.candidateCount": len(all_candidates),
+                    "output.decisionCount": decision_count,
+                    "output.learningCount": learning_count,
+                    "duration.ms": duration_ms,
+                },
+            )
+            return all_candidates
+
+        # Multiple windows: merge and deduplicate
+        before_count = len(all_candidates)
+        merger = dspy.ChainOfThought(MemoryMergeSignature)
+        with dspy.context(lm=lm):
+            merge_result = merger(candidates=all_candidates, metadata=meta)
         capture_dspy_cost(lm, history_start)
-        return []
+        merged = getattr(merge_result, "primitives", [])
+        if not isinstance(merged, list):
+            merged = all_candidates
+        else:
+            merged = [
+                item.model_dump(mode="json", exclude_none=True)
+                if isinstance(item, MemoryCandidate)
+                else item
+                for item in merged
+                if isinstance(item, (MemoryCandidate, dict))
+            ]
 
-    # Single window: no merge needed
-    if len(windows) == 1:
-        capture_dspy_cost(lm, history_start)
-        return all_candidates
+        # Emit extract.merge.complete event
+        span.add_event(
+            "extract.merge.complete",
+            attributes={
+                "output.beforeCount": before_count,
+                "output.afterCount": len(merged),
+            },
+        )
 
-    # Multiple windows: merge and deduplicate
-    merger = dspy.ChainOfThought(MemoryMergeSignature)
-    with dspy.context(lm=lm):
-        merge_result = merger(candidates=all_candidates, metadata=meta)
-    capture_dspy_cost(lm, history_start)
-    merged = getattr(merge_result, "primitives", [])
-    if not isinstance(merged, list):
-        return all_candidates
-    return [
-        item.model_dump(mode="json", exclude_none=True)
-        if isinstance(item, MemoryCandidate)
-        else item
-        for item in merged
-        if isinstance(item, (MemoryCandidate, dict))
-    ]
+        duration_ms = int((time.monotonic() - t0) * 1000)
+        decision_count = sum(1 for c in merged if c.get("primitive") == "decision")
+        learning_count = sum(1 for c in merged if c.get("primitive") == "learning")
+        span.add_event(
+            "extract.complete",
+            attributes={
+                "output.candidateCount": len(merged),
+                "output.decisionCount": decision_count,
+                "output.learningCount": learning_count,
+                "duration.ms": duration_ms,
+            },
+        )
+        return merged
+    except Exception as exc:
+        duration_ms = int((time.monotonic() - t0) * 1000)
+        span.add_event(
+            "extract.error",
+            attributes={
+                "error.type": type(exc).__name__,
+                "error.message": str(exc),
+                "duration.ms": duration_ms,
+            },
+        )
+        raise
+    finally:
+        span.end()
 
 
 def extract_memories_from_session_file(

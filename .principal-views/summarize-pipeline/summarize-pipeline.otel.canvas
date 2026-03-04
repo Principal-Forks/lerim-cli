@@ -1,0 +1,287 @@
+{
+	"nodes": [
+		{
+			"id": "summarize-started",
+			"type": "text",
+			"x": 100,
+			"y": 50,
+			"width": 200,
+			"height": 100,
+			"text": "# Summarize Started\n\nSession summarization begins.",
+			"pv": {
+				"event": {
+					"name": "summarize.started",
+					"attributes": {
+						"input.transcriptLength": {
+							"type": "number",
+							"required": true
+						},
+						"input.windowCount": {
+							"type": "number",
+							"required": true
+						},
+						"input.hasGuidance": {
+							"type": "boolean",
+							"required": true
+						}
+					}
+				},
+				"sources": ["src/lerim/memory/summarization_pipeline.py"],
+				"otel": {
+					"kind": "event",
+					"category": "lifecycle",
+					"files": ["src/lerim/memory/summarization_pipeline.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#22c55e",
+				"stroke": "#16a34a",
+				"status": "implemented"
+			},
+			"color": "#22c55e"
+		},
+		{
+			"id": "window-complete",
+			"type": "text",
+			"x": 100,
+			"y": 250,
+			"width": 200,
+			"height": 100,
+			"text": "# Window Complete\n\nPartial summary generated.",
+			"pv": {
+				"event": {
+					"name": "summarize.window.complete",
+					"attributes": {
+						"window.index": {
+							"type": "number",
+							"required": true
+						},
+						"window.totalWindows": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": ["src/lerim/memory/summarization_pipeline.py"],
+				"otel": {
+					"kind": "event",
+					"category": "operation",
+					"files": ["src/lerim/memory/summarization_pipeline.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#3b82f6",
+				"stroke": "#1d4ed8",
+				"status": "implemented"
+			},
+			"color": "#3b82f6"
+		},
+		{
+			"id": "merge-complete",
+			"type": "text",
+			"x": 100,
+			"y": 450,
+			"width": 200,
+			"height": 100,
+			"text": "# Merge Complete\n\nPartials consolidated.",
+			"pv": {
+				"event": {
+					"name": "summarize.merge.complete",
+					"attributes": {
+						"output.partialCount": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": ["src/lerim/memory/summarization_pipeline.py"],
+				"otel": {
+					"kind": "event",
+					"category": "operation",
+					"files": ["src/lerim/memory/summarization_pipeline.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#3b82f6",
+				"stroke": "#1d4ed8",
+				"status": "implemented"
+			},
+			"color": "#3b82f6"
+		},
+		{
+			"id": "skip-merge",
+			"type": "text",
+			"x": 400,
+			"y": 250,
+			"width": 200,
+			"height": 100,
+			"text": "# Skip Merge\n\nSingle window, direct summary.",
+			"pv": {
+				"event": {
+					"name": "summarize.skip_merge",
+					"attributes": {
+						"output.mode": {
+							"type": "string",
+							"required": true,
+							"description": "Always 'direct' for single window"
+						}
+					}
+				},
+				"sources": ["src/lerim/memory/summarization_pipeline.py"],
+				"otel": {
+					"kind": "event",
+					"category": "operation",
+					"files": ["src/lerim/memory/summarization_pipeline.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#8b5cf6",
+				"stroke": "#7c3aed",
+				"status": "implemented"
+			},
+			"color": "#8b5cf6"
+		},
+		{
+			"id": "summarize-complete",
+			"type": "text",
+			"x": 100,
+			"y": 650,
+			"width": 200,
+			"height": 100,
+			"text": "# Summarize Complete\n\nSummary generated.",
+			"pv": {
+				"event": {
+					"name": "summarize.complete",
+					"attributes": {
+						"output.titleLength": {
+							"type": "number",
+							"required": true
+						},
+						"output.intentWords": {
+							"type": "number",
+							"required": true
+						},
+						"output.narrativeWords": {
+							"type": "number",
+							"required": true
+						},
+						"output.tagCount": {
+							"type": "number",
+							"required": true
+						},
+						"duration.ms": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": ["src/lerim/memory/summarization_pipeline.py"],
+				"otel": {
+					"kind": "event",
+					"category": "lifecycle",
+					"files": ["src/lerim/memory/summarization_pipeline.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#22c55e",
+				"stroke": "#16a34a",
+				"status": "implemented"
+			},
+			"color": "#22c55e"
+		},
+		{
+			"id": "summarize-error",
+			"type": "text",
+			"x": 400,
+			"y": 450,
+			"width": 200,
+			"height": 100,
+			"text": "# Summarize Error\n\nSummarization failed.",
+			"pv": {
+				"event": {
+					"name": "summarize.error",
+					"attributes": {
+						"error.type": {
+							"type": "string",
+							"required": true
+						},
+						"error.message": {
+							"type": "string",
+							"required": true
+						},
+						"duration.ms": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": ["src/lerim/memory/summarization_pipeline.py"],
+				"otel": {
+					"kind": "event",
+					"category": "error",
+					"files": ["src/lerim/memory/summarization_pipeline.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#ef4444",
+				"stroke": "#dc2626",
+				"status": "implemented"
+			},
+			"color": "#ef4444"
+		}
+	],
+	"edges": [
+		{
+			"id": "started-to-window",
+			"fromNode": "summarize-started",
+			"fromSide": "bottom",
+			"toNode": "window-complete",
+			"toSide": "top",
+			"pv": { "edgeType": "flow" }
+		},
+		{
+			"id": "started-to-skip",
+			"fromNode": "summarize-started",
+			"fromSide": "right",
+			"toNode": "skip-merge",
+			"toSide": "top",
+			"pv": { "edgeType": "flow" }
+		},
+		{
+			"id": "window-to-merge",
+			"fromNode": "window-complete",
+			"fromSide": "bottom",
+			"toNode": "merge-complete",
+			"toSide": "top",
+			"pv": { "edgeType": "flow" }
+		},
+		{
+			"id": "merge-to-complete",
+			"fromNode": "merge-complete",
+			"fromSide": "bottom",
+			"toNode": "summarize-complete",
+			"toSide": "top",
+			"pv": { "edgeType": "flow" }
+		},
+		{
+			"id": "skip-to-complete",
+			"fromNode": "skip-merge",
+			"fromSide": "bottom",
+			"toNode": "summarize-complete",
+			"toSide": "right",
+			"pv": { "edgeType": "flow" }
+		},
+		{
+			"id": "started-to-error",
+			"fromNode": "summarize-started",
+			"fromSide": "right",
+			"toNode": "summarize-error",
+			"toSide": "top",
+			"pv": { "edgeType": "error" }
+		}
+	],
+	"pv": {
+		"name": "Summarize Pipeline",
+		"version": "1.0.0",
+		"description": "OpenTelemetry events for DSPy session summarization with windowing",
+		"markdown": ".principal-views/summarize-pipeline/summarize-pipeline.md",
+		"edgeTypes": {
+			"flow": { "label": "Flow", "style": "solid", "width": 2, "color": "#64748b" },
+			"error": { "label": "Error Path", "style": "dashed", "width": 2, "color": "#ef4444" }
+		}
+	}
+}

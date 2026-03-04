@@ -1,0 +1,342 @@
+{
+	"nodes": [
+		{
+			"id": "extract-started",
+			"type": "text",
+			"x": 100,
+			"y": 50,
+			"width": 200,
+			"height": 100,
+			"text": "# Extract Started\n\nMemory extraction begins.",
+			"pv": {
+				"event": {
+					"name": "extract.started",
+					"attributes": {
+						"input.transcriptLength": {
+							"type": "number",
+							"required": true,
+							"description": "Character length of transcript"
+						},
+						"input.windowCount": {
+							"type": "number",
+							"required": true,
+							"description": "Number of windows to process"
+						},
+						"input.hasGuidance": {
+							"type": "boolean",
+							"required": true,
+							"description": "Whether lead agent provided guidance"
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/memory/extract_pipeline.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "lifecycle",
+					"files": ["src/lerim/memory/extract_pipeline.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#22c55e",
+				"stroke": "#16a34a",
+				"status": "implemented"
+			},
+			"color": "#22c55e"
+		},
+		{
+			"id": "window-complete",
+			"type": "text",
+			"x": 100,
+			"y": 250,
+			"width": 200,
+			"height": 100,
+			"text": "# Window Complete\n\nOne window extracted.",
+			"pv": {
+				"event": {
+					"name": "extract.window.complete",
+					"attributes": {
+						"window.index": {
+							"type": "number",
+							"required": true
+						},
+						"window.candidateCount": {
+							"type": "number",
+							"required": true,
+							"description": "Candidates extracted from this window"
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/memory/extract_pipeline.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "operation",
+					"files": ["src/lerim/memory/extract_pipeline.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#3b82f6",
+				"stroke": "#1d4ed8",
+				"status": "implemented"
+			},
+			"color": "#3b82f6"
+		},
+		{
+			"id": "merge-complete",
+			"type": "text",
+			"x": 100,
+			"y": 450,
+			"width": 200,
+			"height": 100,
+			"text": "# Merge Complete\n\nCandidates deduplicated.",
+			"pv": {
+				"event": {
+					"name": "extract.merge.complete",
+					"attributes": {
+						"output.beforeCount": {
+							"type": "number",
+							"required": true,
+							"description": "Candidates before merge"
+						},
+						"output.afterCount": {
+							"type": "number",
+							"required": true,
+							"description": "Candidates after dedupe"
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/memory/extract_pipeline.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "operation",
+					"files": ["src/lerim/memory/extract_pipeline.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#3b82f6",
+				"stroke": "#1d4ed8",
+				"status": "implemented"
+			},
+			"color": "#3b82f6"
+		},
+		{
+			"id": "extract-complete",
+			"type": "text",
+			"x": 100,
+			"y": 650,
+			"width": 200,
+			"height": 100,
+			"text": "# Extract Complete\n\nExtraction finished.",
+			"pv": {
+				"event": {
+					"name": "extract.complete",
+					"attributes": {
+						"output.candidateCount": {
+							"type": "number",
+							"required": true,
+							"description": "Final candidate count"
+						},
+						"output.decisionCount": {
+							"type": "number",
+							"required": true
+						},
+						"output.learningCount": {
+							"type": "number",
+							"required": true
+						},
+						"duration.ms": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/memory/extract_pipeline.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "lifecycle",
+					"files": ["src/lerim/memory/extract_pipeline.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#22c55e",
+				"stroke": "#16a34a",
+				"status": "implemented"
+			},
+			"color": "#22c55e"
+		},
+		{
+			"id": "skip-merge",
+			"type": "text",
+			"x": 400,
+			"y": 450,
+			"width": 200,
+			"height": 100,
+			"text": "# Skip Merge\n\nSingle window, no merge needed.",
+			"pv": {
+				"event": {
+					"name": "extract.skip_merge",
+					"attributes": {
+						"output.candidateCount": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/memory/extract_pipeline.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "operation",
+					"files": ["src/lerim/memory/extract_pipeline.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#8b5cf6",
+				"stroke": "#7c3aed",
+				"status": "implemented"
+			},
+			"color": "#8b5cf6"
+		},
+		{
+			"id": "extract-error",
+			"type": "text",
+			"x": 400,
+			"y": 250,
+			"width": 200,
+			"height": 100,
+			"text": "# Extract Error\n\nExtraction failed.",
+			"pv": {
+				"event": {
+					"name": "extract.error",
+					"attributes": {
+						"error.type": {
+							"type": "string",
+							"required": true
+						},
+						"error.message": {
+							"type": "string",
+							"required": true
+						},
+						"error.windowIndex": {
+							"type": "number",
+							"required": false,
+							"description": "Window index if failed during extraction"
+						},
+						"duration.ms": {
+							"type": "number",
+							"required": true
+						}
+					}
+				},
+				"sources": [
+					"src/lerim/memory/extract_pipeline.py"
+				],
+				"otel": {
+					"kind": "event",
+					"category": "error",
+					"files": ["src/lerim/memory/extract_pipeline.py"]
+				},
+				"shape": "rectangle",
+				"fill": "#ef4444",
+				"stroke": "#dc2626",
+				"status": "implemented"
+			},
+			"color": "#ef4444"
+		}
+	],
+	"edges": [
+		{
+			"id": "started-to-window",
+			"fromNode": "extract-started",
+			"fromSide": "bottom",
+			"toNode": "window-complete",
+			"toSide": "top",
+			"pv": {
+				"edgeType": "flow"
+			}
+		},
+		{
+			"id": "window-to-merge",
+			"fromNode": "window-complete",
+			"fromSide": "bottom",
+			"toNode": "merge-complete",
+			"toSide": "top",
+			"pv": {
+				"edgeType": "flow"
+			}
+		},
+		{
+			"id": "merge-to-complete",
+			"fromNode": "merge-complete",
+			"fromSide": "bottom",
+			"toNode": "extract-complete",
+			"toSide": "top",
+			"pv": {
+				"edgeType": "flow"
+			}
+		},
+		{
+			"id": "started-to-error",
+			"fromNode": "extract-started",
+			"fromSide": "right",
+			"toNode": "extract-error",
+			"toSide": "left",
+			"pv": {
+				"edgeType": "error"
+			}
+		},
+		{
+			"id": "window-to-error",
+			"fromNode": "window-complete",
+			"fromSide": "right",
+			"toNode": "extract-error",
+			"toSide": "left",
+			"pv": {
+				"edgeType": "error"
+			}
+		},
+		{
+			"id": "window-to-skip-merge",
+			"fromNode": "window-complete",
+			"fromSide": "right",
+			"toNode": "skip-merge",
+			"toSide": "top",
+			"pv": {
+				"edgeType": "flow"
+			}
+		},
+		{
+			"id": "skip-merge-to-complete",
+			"fromNode": "skip-merge",
+			"fromSide": "bottom",
+			"toNode": "extract-complete",
+			"toSide": "right",
+			"pv": {
+				"edgeType": "flow"
+			}
+		}
+	],
+	"pv": {
+		"name": "Extract Pipeline",
+		"version": "1.0.0",
+		"description": "OpenTelemetry events for DSPy memory extraction with windowing",
+		"markdown": ".principal-views/extract-pipeline/extract-pipeline.md",
+		"edgeTypes": {
+			"flow": {
+				"label": "Flow",
+				"style": "solid",
+				"width": 2,
+				"color": "#64748b"
+			},
+			"error": {
+				"label": "Error Path",
+				"style": "dashed",
+				"width": 2,
+				"color": "#ef4444"
+			}
+		}
+	}
+}

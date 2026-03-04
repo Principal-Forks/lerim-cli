@@ -12,6 +12,7 @@ import json
 import os
 import re
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -19,10 +20,14 @@ from typing import Any
 
 import dspy
 import frontmatter
+from opentelemetry import trace
 from pydantic import BaseModel, Field
 
 from lerim.memory.memory_record import slugify
 from lerim.config.settings import get_config, reload_config
+
+# Get tracer for summarize operations
+_tracer = trace.get_tracer("lerim.summarize", "0.1.0")
 from lerim.memory.utils import configure_dspy_lm, window_transcript
 from lerim.runtime.cost_tracker import capture_dspy_cost
 from lerim.sessions import catalog as session_db
@@ -142,6 +147,7 @@ def _summarize_trace(
     guidance: str = "",
 ) -> dict[str, Any]:
     """Run ChainOfThought summarization with windowing and return validated summary."""
+    t0 = time.monotonic()
     if not transcript.strip():
         raise RuntimeError("session_trace_empty")
     config = get_config()
@@ -153,45 +159,103 @@ def _summarize_trace(
     met = metrics or {}
     guid = guidance.strip()
 
-    history_start = len(lm.history)
-    with dspy.context(lm=lm):
-        if len(windows) == 1:
-            # Single window: direct summarization
-            result = dspy.ChainOfThought(TraceSummarySignature)(
-                transcript=windows[0], metadata=meta, metrics=met, guidance=guid
-            )
-        else:
-            # Multiple windows: partial summaries then merge
-            partials: list[dict] = []
-            window_summarizer = dspy.ChainOfThought(WindowSummarySignature)
-            for i, window in enumerate(windows):
-                partial_result = window_summarizer(
-                    transcript=window,
-                    metadata=meta,
-                    window_index=i,
-                    total_windows=len(windows),
-                )
-                partial = getattr(partial_result, "partial", None)
-                if isinstance(partial, PartialSummary):
-                    partials.append(partial.model_dump(mode="json"))
-                elif isinstance(partial, dict):
-                    partials.append(partial)
-            result = dspy.ChainOfThought(TraceSummaryMergeSignature)(
-                partial_summaries=partials,
-                metadata=meta,
-                metrics=met,
-                guidance=guid,
-            )
-    capture_dspy_cost(lm, history_start)
+    # Start OTEL span for summarize pipeline
+    span = _tracer.start_span("summarize.pipeline")
+    try:
+        # Emit summarize.started event
+        span.add_event(
+            "summarize.started",
+            attributes={
+                "input.transcriptLength": len(transcript),
+                "input.windowCount": len(windows),
+                "input.hasGuidance": bool(guid),
+            },
+        )
 
-    payload = getattr(result, "summary_payload", None)
-    if isinstance(payload, TraceSummaryCandidate):
-        candidate = payload
-    elif isinstance(payload, dict):
-        candidate = TraceSummaryCandidate.model_validate(payload)
-    else:
-        raise RuntimeError("dspy summary_payload must be TraceSummaryCandidate or dict")
-    return candidate.model_dump(mode="json", exclude_none=True)
+        history_start = len(lm.history)
+        with dspy.context(lm=lm):
+            if len(windows) == 1:
+                # Single window: direct summarization
+                span.add_event(
+                    "summarize.skip_merge",
+                    attributes={"output.mode": "direct"},
+                )
+                result = dspy.ChainOfThought(TraceSummarySignature)(
+                    transcript=windows[0], metadata=meta, metrics=met, guidance=guid
+                )
+            else:
+                # Multiple windows: partial summaries then merge
+                partials: list[dict] = []
+                window_summarizer = dspy.ChainOfThought(WindowSummarySignature)
+                for i, window in enumerate(windows):
+                    partial_result = window_summarizer(
+                        transcript=window,
+                        metadata=meta,
+                        window_index=i,
+                        total_windows=len(windows),
+                    )
+                    partial = getattr(partial_result, "partial", None)
+                    if isinstance(partial, PartialSummary):
+                        partials.append(partial.model_dump(mode="json"))
+                    elif isinstance(partial, dict):
+                        partials.append(partial)
+                    # Emit summarize.window.complete event
+                    span.add_event(
+                        "summarize.window.complete",
+                        attributes={
+                            "window.index": i,
+                            "window.totalWindows": len(windows),
+                        },
+                    )
+                # Emit summarize.merge.complete event
+                span.add_event(
+                    "summarize.merge.complete",
+                    attributes={"output.partialCount": len(partials)},
+                )
+                result = dspy.ChainOfThought(TraceSummaryMergeSignature)(
+                    partial_summaries=partials,
+                    metadata=meta,
+                    metrics=met,
+                    guidance=guid,
+                )
+        capture_dspy_cost(lm, history_start)
+
+        payload = getattr(result, "summary_payload", None)
+        if isinstance(payload, TraceSummaryCandidate):
+            candidate = payload
+        elif isinstance(payload, dict):
+            candidate = TraceSummaryCandidate.model_validate(payload)
+        else:
+            raise RuntimeError("dspy summary_payload must be TraceSummaryCandidate or dict")
+
+        result_dict = candidate.model_dump(mode="json", exclude_none=True)
+        duration_ms = int((time.monotonic() - t0) * 1000)
+
+        # Emit summarize.complete event
+        span.add_event(
+            "summarize.complete",
+            attributes={
+                "output.titleLength": len(result_dict.get("title", "")),
+                "output.intentWords": len(result_dict.get("user_intent", "").split()),
+                "output.narrativeWords": len(result_dict.get("session_narrative", "").split()),
+                "output.tagCount": len(result_dict.get("tags", [])),
+                "duration.ms": duration_ms,
+            },
+        )
+        return result_dict
+    except Exception as exc:
+        duration_ms = int((time.monotonic() - t0) * 1000)
+        span.add_event(
+            "summarize.error",
+            attributes={
+                "error.type": type(exc).__name__,
+                "error.message": str(exc),
+                "duration.ms": duration_ms,
+            },
+        )
+        raise
+    finally:
+        span.end()
 
 
 def write_summary_markdown(
